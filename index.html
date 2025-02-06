@@ -1,0 +1,550 @@
+<html>
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  </head>
+  <script>
+    // URL del servidor
+    const urlServidor = "https://epli.exp.dc.uba.ar"
+    // ¿Está habilitado el servidor de redirección?
+    const servidorDeRedireccion = false;
+    const puertoInicial = 8040; // En caso de usar el servidor de redirección
+
+    // Para habilitar la configuración del servidor a mano a través de IP y puerto (asignar 'false' para anular)
+    let servidorManual = false;
+
+    // Para iniciar con una IP de servidor particular (comentar para anular)
+    window.servidor = "192.168.0.11";
+    // window.servidor = "157.92.26.235";
+  </script>
+  <style media="screen">
+    body {
+      background-color: #ccd;
+    }
+    .formLogin {
+      background-color: #fff;
+      border-color: #999;
+      border-width: 2px;
+      border-style: solid;
+      border-radius: 5px;
+      padding: 10px;
+      margin: auto;
+      margin-top: 100px;
+      width: 350px;
+      height: 150px;
+    }
+    .formContent {
+      margin: auto;
+      width: auto;
+      height: auto;
+      display: table;
+    }
+    #errorLogin {
+      border-color: #0000;
+      border-width: 2px;
+      border-style: solid;
+      border-radius: 5px;
+      color: red;
+      text-align: center;
+    }
+    .dataCurso {
+      border-radius: 5px;
+      border-width: 1px;
+      border-color: #999;
+      border-style: solid;
+      background-color: #fff;
+      padding: 10px;
+    }
+    #labelDni {
+      margin-right: 10px;
+    }
+    .floatBar {
+      float:left;
+      position: absolute;
+      background-color: #fff;
+      border-radius: 15px;
+      border-style: solid;
+      border-width: 1px;
+      border-color: #999;
+      padding: 3px 15px;
+    }
+    #contenido {
+      height: calc(100% - 73px);
+      overflow-y: auto;
+      border: solid 1px #000;
+      border-radius: 5px 0px 0px 0px;
+      padding: 5px 15px;
+      background-color: #fff;
+    }
+  </style>
+  <div id="ui" style="display:block;">
+    <div id="login" style="display:block;">
+      <div class="formLogin">
+        <div class="formContent">
+          <table>
+            <tr>
+              <td>
+                <label><b>Usuario</b></label>
+              </td>
+              <td>
+                <input id="loginUsuario" type="text" placeholder="nombre de usuario">
+              </td>
+            </tr>
+            <tr>
+              <td>
+                <label><b>Contraseña</b></label>
+              </td>
+              <td>
+                <input id="loginContrasenia" type="password" placeholder="contraseña">
+              </td>
+            </tr>
+          </table>
+          <br/>
+          <div class="formContent">
+            <button onclick="tryLogin();">Ingresar</button>
+            <br/>
+            <label>
+              <!-- <input type="checkbox" checked="checked"> Recuérdame -->
+            </label>
+            <br/>
+            <button id="cancelLogin" onclick="cancelLogin();" style="display: none;">Cancelar</button>
+          </div>
+          <div id="errorLogin"></div>
+        </div>
+      </div>
+    </div>
+    <div id="seleccionDeCurso" style="display:none;"></div>
+    <div id="workspace" style="display:none;">
+      <div class="floatBar" style="top: 5px;">
+        <span id="curso">
+          Curso: <span id="cursoSeleccionado">Ninguno</span>
+          <button id="abrirCurso" onclick="cargarCursos();">Abrir</button>
+          <span> - </span>
+        </span>
+        Cuestionario: <span id="ejercicioSeleccionado">Ninguno</span>
+        <button id="abrirEjercicio" onclick="abrirEjercicio();">Abrir</button>
+      </div>
+      <span style="display: block;height: 30px;"></span>
+      <div id="contenido">
+      </div>
+      <span style="display: block;height: 30px;"></span>
+      <div class="floatBar" style="bottom: 11px;border-radius: 0px 0px 15px 15px;">
+        <span id="dni">
+          Usuario: <label id="labelDni">Anónimo</label>
+          <button onclick="cambiarDni();">Cambiar</button>
+        </span>
+      </div>
+    </div>
+  </div>
+  <div class="floatBar" style="bottom: 5px;right: 5px;">
+    <span id="servidorManual">
+      Servidor:
+      <input type="text" id="url" style="width:100px">
+      :
+      <input type="text" value="" id="port" style="width:50px">
+    </span>
+    <button onclick="manual();">Configurar servidor manual</button>
+  </div>
+  <div id="espera" style="display:none;">
+    Conectando con el servidor...
+  </div>
+  <script>
+
+    const info = {}; // dni, curso, ejercicio, ...
+
+    const cursos = {};
+
+    const labelDni = document.getElementById("labelDni");
+
+    const mostrarServidor = function() {
+      if (servidorManual) {
+        if ('servidor' in window) {
+          document.getElementById("url").value = window.servidor;
+        }
+        document.getElementById("servidorManual").style.display = '';
+      } else {
+        document.getElementById("servidorManual").style.display = 'none';
+      }
+    };
+    mostrarServidor(servidorManual);
+
+    const manual = function() {
+      servidorManual = !servidorManual;
+      mostrarServidor();
+    };
+
+    const tryLogin = function() {
+      let usuario = document.getElementById("loginUsuario").value;
+      let contrasenia = document.getElementById("loginContrasenia").value;
+      if (usuario.length == 0 || contrasenia.length == 0) {
+        errorLogin("Ingrese usuario y contraseña.");
+      } else {
+        const fLogin = function(jsonObj) {
+          if ('resultado' in jsonObj) {
+            if (jsonObj.resultado == "Falla") {
+              errorLogin("No se pudo autenticar.");
+            } else if (jsonObj.resultado == "OK") {
+              limpiarErrorLogin();
+              registrarCursosRecibidos(jsonObj);
+              if ('curso' in jsonObj) {
+                actualizaCursoSeleccionado(jsonObj.curso);
+              }
+              if ('usuario' in jsonObj) {
+                info.dni = jsonObj.usuario;
+                dniSet(info.dni);
+              }
+              if ('contrasenia' in jsonObj) {
+                info.contrasenia = jsonObj.contrasenia;
+              }
+              let aCargar = {
+                dst:pantallaWorkspace
+              };
+              let sesionPrevia = localStorage.getItem(`text ${info.dni}`);
+              if (!('curso' in aCargar)) {
+                let cursoPrevio = localStorage.getItem(`curso ${info.dni}`);
+                if (cursoPrevio !== null && cursoPrevio !== undefined) {
+                  aCargar.curso = cursoPrevio;
+                  if (!('ej' in aCargar)) {
+                    let ejercicioPrevio = localStorage.getItem(`ej ${info.dni}`);
+                    if (ejercicioPrevio !== null && ejercicioPrevio !== undefined) {
+                      aCargar.ej = ejercicioPrevio;
+                    }
+                  }
+                } else {
+                  aCargar.dst = cargarCursos
+                }
+              }
+              cargarDatos(aCargar);
+              if ('interval' in info) {
+                clearInterval(info.interval);
+              }
+              // info.interval = setInterval(function() {
+              //   // ¿Guardar las respuestas por ahora?
+              // }, 1000);
+              aCargar.dst();
+              document.getElementById("cancelLogin").style.display = '';
+            }
+          } else {
+            alert("ERROR: resultado faltante");
+          }
+        };
+        const datos = {usuario, contrasenia};
+        if ('curso' in info) {
+          datos.curso = info.curso;
+        }
+        sendRequest('POST', 'login', fLogin, datos);
+      }
+    };
+
+    const errorLogin = function(s) {
+      document.getElementById("errorLogin").innerHTML = `Error: ${s}`;
+    };
+
+    const limpiarErrorLogin = function() {
+      document.getElementById("errorLogin").innerHTML = '';
+    };
+
+    const cancelLogin = function() {
+      pantallaWorkspace();
+    };
+
+    const pantallaWorkspace = function() {
+      document.getElementById("login").style.display = 'none';
+      document.getElementById("seleccionDeCurso").style.display = 'none';
+      document.getElementById("workspace").style.display = 'block';
+    };
+
+    const pantallaSelector = function() {
+      document.getElementById("login").style.display = 'none';
+      document.getElementById("seleccionDeCurso").style.display = 'block';
+      document.getElementById("workspace").style.display = 'none';
+    };
+
+    const abrirEjercicio = function() {
+      if ('curso' in info) {
+        cargarEjercicios();
+        pantallaSelector();
+      } else {
+        alert("No estás en ningún curso"); return;
+      }
+    };
+
+    const seleccionarEjercicio = function(i) {
+      if (i === null) {
+        delete info.ejercicio;
+        if ('dni' in info) { localStorage.removeItem(`ej ${info.dni}`); }
+        actualizarNombreEjercicio();
+      } else {
+        if ('dni' in info) { localStorage.setItem(`ej ${info.dni}`, i); }
+        const ej = cursos[info.curso].ejs[i];
+        cargarEjercicio(ej);
+      }
+      pantallaWorkspace();
+    };
+
+    const actualizarNombreEjercicio = function(n) {
+      document.getElementById('ejercicioSeleccionado').innerHTML = (n === undefined ? 'Ninguno' : n)
+    };
+
+    const actualizaEjercicioSeleccionado = function(ej) {
+      info.ejercicio = ej;
+      if ('dni' in info) {
+        let jsonObj = {
+          dni: info.dni,
+          ejercicio: ej.nombre,
+        };
+        sendRequest('POST', 'open', function() {}, jsonObj);
+      }
+      actualizarNombreEjercicio(ej.nombre);
+    };
+
+    const cargarEjercicio = function(ej) {
+      actualizaEjercicioSeleccionado(ej);
+    };
+
+    const seleccionarCurso = function(k) {
+      if (k != info.curso) {
+        if (k === '0') {
+          actualizarNombreCurso();
+          delete info.curso;
+          if ('dni' in info) { localStorage.removeItem(`curso ${info.dni}`); }
+        } else {
+          if ('dni' in info) { localStorage.setItem(`curso ${info.dni}`, k); }
+          actualizaCursoSeleccionado(k);
+        }
+        seleccionarEjercicio(null);
+      }
+      pantallaWorkspace();
+    };
+
+    const actualizaCursoSeleccionado = function(k) {
+      info.curso = k;
+      let curso = cursos[k];
+      actualizarNombreCurso(curso.nombre);
+    };
+
+    const actualizarNombreCurso = function(n) {
+      if (n === undefined) {
+        document.getElementById("cursoSeleccionado").innerHTML = "Ninguno";
+        document.getElementById("abrirCurso").innerHTML = "Abrir";
+      } else {
+        document.getElementById("cursoSeleccionado").innerHTML = n;
+        document.getElementById("abrirCurso").innerHTML = "Cambiar";
+      }
+    };
+
+    const cargarCursos = function() {
+      pedirCursos(function() {
+        let contenidoPantalla = '<h2>Seleccione un curso</h2>';
+        // contenidoPantalla += '<button onclick="seleccionarCurso(\'0\');">Libre</button><br/>';
+        for (c in cursos) {
+          contenidoPantalla += `<div class="dataCurso"><button onclick="seleccionarCurso('${c}');">${cursos[c].nombre}</button><br/>`;
+          contenidoPantalla += informacionCurso(cursos[c]) + '</div>';
+        }
+        document.getElementById("seleccionDeCurso").innerHTML = contenidoPantalla /*+
+          '<button onclick="pantallaWorkspace();">Cancelar</button>'*/;
+          pantallaSelector();
+      });
+    };
+
+    const datosCurso = {
+      descripcion:{title:"Detalle"},
+      anio:{title:"Año",next:', '},
+      edicion:{title:"Edición"},
+      institucion:{title:"Institución"},
+      responsable:{title:"Responsables", show:function(r) {
+        let showUno = (x) => x.nombre + ('contacto' in x ? ` (${mostrarMail(x.contacto)})` : '');
+        return Array.isArray(r) ? '<br/>' + r.join('<br/>') : showUno(r);
+      }},
+    };
+    const mostrarMail = function(mailEncriptado) {
+      return `<a href="mailto:${mailEncriptado.replace(" (AT) ","@")}">${mailEncriptado}</a>`;
+    };
+    const informacionCurso = function(curso) {
+      let resultado = '';
+      for (let k in datosCurso) {
+        let show = 'show' in datosCurso[k] ? datosCurso[k].show : (x) => `${x}`;
+        let next = 'next' in datosCurso[k] ? datosCurso[k].next : '<br/>';
+        resultado += `<b>${datosCurso[k].title}</b>: ${show(curso[k])}${next}`;
+      }
+      return resultado;
+    };
+
+    const pedirCursos = function(f) {
+      if (Object.keys(cursos).length == 0) {
+        const callback = function(jsonObj) {
+          registrarCursosRecibidos(jsonObj, f);
+        };
+        const failCallback = function() {
+          alert("ERROR: falló la comunicación con el servidor");
+        };
+        sendRequest('POST', 'cursos', callback, {usuario: info.dni, contrasenia:info.contrasenia}, failCallback);
+      } else {
+        f();
+      }
+    };
+
+    const registrarCursosRecibidos = function(jsonObj, opt_f) {
+      if ('cursos' in jsonObj) {
+        for (let k in cursos) {
+          if (!(k in jsonObj.cursos)) {
+            delete cursos[k];
+          }
+        }
+        for (let k in jsonObj.cursos) {
+          cursos[k] = jsonObj.cursos[k];
+        }
+        if (opt_f){
+          opt_f();
+        }
+      }
+    };
+
+    const cargarEjercicios = function() {
+      let contenidoPantalla = '<button onclick="seleccionarEjercicio(null);">Libre</button><br/>';
+      let i=0;
+      for (ej of cursos[info.curso].ejs) {
+        if (ejercicioDisponible(ej)) {
+          contenidoPantalla += `<button onclick="seleccionarEjercicio(${i});">${ej.nombre}</button><br/>`;
+        }
+        i++;
+      }
+      document.getElementById("seleccionDeCurso").innerHTML = contenidoPantalla +
+        '<button onclick="pantallaWorkspace();">Cancelar</button>';
+    };
+
+    const ejercicioDisponible = function(ej) {
+      return !('mostrar' in ej) || ej.mostrar;
+    }
+
+    const sendRequest = function(method, path, callback, jsonObj, failCallback, timeout=2) {
+      document.getElementById("ui").style.display = 'none';
+      document.getElementById("espera").style.display = 'block';
+      let request = createRequest(timeout);
+      request.open(method, rutaAlServidor() + path, true);
+      request.setRequestHeader('Content-type', 'application/json');
+      request.onreadystatechange = function() {
+        if (request.readyState == 4) {
+          // localStorage.clear();
+          if (request.status == 200) {
+            try {
+              let received = JSON.parse(request.responseText);
+              callback(received);
+            } catch (e) {
+              console.log(e);
+              if (failCallback) { failCallback(); }
+            }
+          } else {
+            console.log(request.status);
+            if (failCallback) { failCallback(); }
+          }
+          document.getElementById("espera").style.display = 'none';
+          document.getElementById("ui").style.display = 'block';
+        }
+      };
+      if (jsonObj) {
+        request.send(JSON.stringify(jsonObj));
+      } else {
+        request.send('');
+      }
+    };
+
+    const createRequest = function(timeout=2) {
+      var request = null;
+      try { // Firefox, Chrome, IE7+, Opera, Safari
+        request = new XMLHttpRequest();
+      }
+      catch (e) {
+        try { // IE6 and earlier
+          request = new ActiveXObject('Msxml2.XMLHTTP');
+        }
+        catch (e) {
+          try {
+            request = new ActiveXObject('Microsoft.XMLHTTP');
+          }
+          catch (e) {
+            throw 'Your browser does not support AJAX';
+            request = null;
+          }
+        }
+      }
+      request.timeout = timeout*1000;
+      return request;
+    };
+
+    const rutaAlServidor = function() {
+      let port_value = document.getElementById("port").value;
+      const port = port_value.length > 0 ? port_value : `${('dni' in info ? puertoParaDni() : puertoInicial+10)}`;
+      if (servidorManual) {
+        let url = document.getElementById("url").value;
+        if (!esUrlValida(url)) {
+          url = prompt("Ingrese la url del servidor");
+          while (!esUrlValida(url)) {
+            url = prompt("La url ingresada es inválida. Ingrese la url del servidor");
+          }
+          document.getElementById("url").value = url;
+        }
+        return `http://${url}:${port}/`;
+      } else {
+        if (servidorDeRedireccion) {
+          return `${urlServidor}/robotutor_${port}/`;
+        } else {
+          return `${urlServidor}/`;
+        }
+      }
+    };
+
+    const esUrlValida = function(url) {
+      return url.length > 0;
+    }
+
+    const puertoParaDni = function() {
+      let p = 10;
+      if (info.dni.length > 0) {
+        p = info.dni.charAt(info.dni.length-1);
+        p = isNaN(Number.parseInt(p)) ? 10 : Number.parseInt(p);
+      }
+      return puertoInicial + p;
+    };
+
+    const parametroURL = function(clave) {
+      let url = location.href;
+      clave = clave.replace(/[\[]/,"\\[").replace(/[\]]/,"\\]");
+      var regexS = "[\\?&]"+clave+"=([^&#]*)";
+      var regex = new RegExp( regexS );
+      var results = regex.exec( url );
+      return results === null ? null : results[1];
+    };
+
+    const dniSet = function(dni) {
+      labelDni.innerHTML = dni;
+    };
+
+    const pantallaLogin = function() {
+      document.getElementById('login').style.display = 'block';
+      document.getElementById('workspace').style.display = 'none';
+      document.getElementById('seleccionDeCurso').style.display = 'none';
+    };
+
+    const pedirDni = function() {
+      pantallaLogin();
+    };
+
+    const cargarDatos = function(aCargar) {
+      if ('curso' in aCargar) {
+        pedirCursos(function() {
+          actualizaCursoSeleccionado(aCargar.curso);
+          if ('ej' in aCargar) {
+            actualizaEjercicioSeleccionado(cursos[info.curso].ejs[aCargar.ej]);
+          } else {
+            seleccionarEjercicio(null);
+          }
+        });
+      } else {
+        seleccionarCurso('0');
+      }
+    }
+
+    const cambiarDni = function() {
+      pedirDni();
+    };
+  </script>
