@@ -79,6 +79,24 @@
       padding: 5px 15px;
       background-color: #fff;
     }
+    .pregunta {
+      border: 1px solid;
+      border-radius: 5px;
+      padding: 10px;
+    }
+    .respuestas {
+      border-radius: 5px;
+      background-color: #ccd;
+      padding: 10px;
+      margin-top: 20px;
+      margin-bottom: 30px;
+    }
+    .espacioRespuesta {
+      padding: 5px;
+      border: 1px solid;
+      border-radius: 5px;
+      background-color: #fff;
+    }
   </style>
   <div id="ui" style="display:block;">
     <div id="login" style="display:block;">
@@ -280,7 +298,10 @@
     const seleccionarEjercicio = function(i) {
       if (i === null) {
         delete info.ejercicio;
-        if ('dni' in info) { localStorage.removeItem(`ej ${info.dni}`); }
+        if ('dni' in info) {
+          localStorage.removeItem(`ej ${info.dni}`);
+          localStorage.removeItem(`pg ${info.dni}`);
+        }
         actualizarNombreEjercicio();
       } else {
         const ej = cursos[info.curso].cuestionarios[i];
@@ -305,6 +326,7 @@
         sendRequest('POST', 'open', function() {}, jsonObj);
       }
       actualizarNombreEjercicio(ej.nombre);
+      mostrarCuestionario(ej);
     };
 
     const cargarEjercicio = function(ej) {
@@ -583,4 +605,175 @@
         document.getElementById("abrirEjercicio").style.display = 'none';
       }
     }
+
+    const mostrarCuestionario = function(cuestionario) {
+      info.pagina = 0
+      if ('dni' in info) {
+        let paginaAnterior = localStorage.getItem(`pg ${info.dni}`);
+        if (paginaAnterior !== null) {
+          info.pagina = Number.parseInt(paginaAnterior);
+        }
+      }
+      if (info.pagina == 0) {
+        mostrarBienvenidaCuestionario(cuestionario);
+      } else {
+        mostrarPaginaCuestionario(info.pagina);
+      }
+    };
+
+    const mostrarBienvenidaCuestionario = function(cuestionario) {
+      let pagina = document.getElementById('contenido pg 0');
+      if (pagina === null) {
+        pagina = document.createElement('div');
+        pagina.setAttribute('id', 'contenido pg 0');
+        document.getElementById("contenido").appendChild(pagina);
+        let div = document.createElement('h3');
+        div.innerHTML = cuestionario.nombre;
+        pagina.appendChild(div);
+        pagina.appendChild(botonSiguiente("Comenzar"));
+      } else {
+        pagina.style.display = 'block';
+      }
+    };
+
+    const botonSiguiente = function(texto) {
+      let b = document.createElement('button');
+      b.innerHTML = texto;
+      b.addEventListener('click', pasarPagina);
+      return b;
+    };
+
+    const botonAtras = function() {
+      let b = document.createElement('button');
+      b.innerHTML = "Atrás";
+      b.addEventListener('click', volverPagina);
+      return b;
+    };
+
+    const pasarPagina = function() {
+      ocultarPaginaActual();
+      if (info.pagina < info.ejercicio.solo_preguntas.length) {
+        info.pagina = info.pagina + 1;
+        if ('dni' in info) { localStorage.setItem(`pg ${info.dni}`, info.pagina); }
+        mostrarPaginaCuestionario(info.pagina);
+      } else {
+        if ('dni' in info) {
+          localStorage.removeItem(`ej ${info.dni}`);
+          localStorage.removeItem(`pg ${info.dni}`);
+        }
+      }
+    };
+
+    const volverPagina = function() {
+      ocultarPaginaActual();
+      if (info.pagina > 0) {
+        info.pagina = info.pagina - 1;
+        if ('dni' in info) { localStorage.setItem(`pg ${info.dni}`, info.pagina); }
+        if (info.pagina == 0) {
+          mostrarBienvenidaCuestionario(info.ejercicio);
+        } else {
+          mostrarPaginaCuestionario(info.pagina);
+        }
+      }
+    };
+
+    const ocultarPaginaActual = function() {
+      let pagina = document.getElementById(`contenido pg ${info.pagina}`);
+      if (pagina !== null) {
+        pagina.style.display = 'none';
+      }
+    };
+
+    const mostrarPaginaCuestionario = function() {
+      let pagina = document.getElementById(`contenido pg ${info.pagina}`);
+      if (pagina === null) {
+        pagina = document.createElement('div');
+        pagina.setAttribute('id', `contenido pg ${info.pagina}`);
+        document.getElementById("contenido").appendChild(pagina);
+        let nPregunta = info.pagina-1;
+        let pregunta = info.ejercicio.solo_preguntas[nPregunta];
+        let titulo = document.createElement('h4');
+        titulo.innerHTML = pregunta.titulo;
+        pagina.appendChild(titulo);
+        let contenido = document.createElement('div');
+        contenido.classList.add('pregunta');
+        contenido.innerHTML = pregunta.pregunta;
+        pagina.appendChild(contenido);
+        // if (pregunta.tipo) != 20 {
+          let respuestas = document.createElement('div');
+          respuestas.classList.add('respuestas');
+          respuestas.innerHTML = `<span>Tu respuesta:</span>`;
+          pagina.appendChild(respuestas);
+          let opciones = document.createElement('div');
+          opciones.classList.add('espacioRespuesta');
+          respuestas.appendChild(opciones);
+          completarOpciones(opciones, nPregunta)
+        // }
+        pagina.appendChild(botonAtras());
+        pagina.appendChild(botonSiguiente(
+          info.pagina < info.ejercicio.solo_preguntas.length
+          ? "Siguiente"
+          : "Finalizar"
+        ));
+      } else {
+        pagina.style.display = 'block';
+      }
+    };
+
+    const completarOpciones = function(opciones, nPregunta) {
+      // if (pregunta.tipo == 2 || pregunta.tipo == 3) {
+        let textosRespuestas = info.ejercicio.solo_respuestas[nPregunta];
+        for (let i=0; i < textosRespuestas.length; i++) {
+          if (i>0) {
+            opciones.appendChild(document.createElement("br"));
+            opciones.appendChild(document.createElement("br"));
+          }
+          opciones.appendChild(botonRespuesta(nPregunta, i, textosRespuestas[i].texto, opciones));
+        }
+      // }
+    };
+
+    const botonRespuesta = function(nPregunta, nRespuesta, texto, opciones) {
+      let b = document.createElement('button');
+      b.innerHTML = texto;
+      b.addEventListener('click', fResponder(nPregunta, nRespuesta, texto, opciones));
+      return b;
+    };
+
+    const fResponder = function(nPregunta, nRespuesta, texto, opciones) {
+      return function() {
+        opciones.innerHTML = texto;
+        const datos = {
+          usuario: info.dni,
+          contrasenia: info.contrasenia,
+          cuestionario: info.ejercicio.nombre,
+          nPregunta, nRespuesta
+        };
+        // sendRequest('POST', 'answer', fVerRespuesta(opciones, nPregunta), datos);
+      };
+    };
+
+    const verRespuesta = function(opciones, nPregunta) {
+      return function(jsonObj) {
+        /*
+        if ('correcto' in jsonObj) {
+          // Mostrar si es correcto o no
+        }
+        if ('devolucion' in jsonObj) {
+          // Mostrar la devolución
+        }
+        */
+        opciones.appendChild(botonReintentar(opciones, nPregunta));
+      }
+    };
+
+    const botonReintentar = function(opciones, nPregunta) {
+      let b = document.createElement('button');
+      b.innerHTML = "Cambiar la respuesta";
+      b.addEventListener('click', function() {
+        opciones.innerHTML = "";
+        completarOpciones(opciones, nPregunta);
+      });
+      return b;
+    };
   </script>
