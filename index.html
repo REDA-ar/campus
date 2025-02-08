@@ -255,7 +255,15 @@
         if ('curso' in info) {
           datos.curso = info.curso;
           if ('ejercicio' in info) {
-            datos.ej = info.ejercicio;
+            datos.cuestionario = info.ejercicio;
+          }
+        }
+        if ('force_ej' in window) {
+          if ('curso' in window.force_ej) {
+            datos.curso = window.force_ej.curso;
+            if ('ej' in window.force_ej) {
+              datos.cuestionario = window.force_ej.ej;
+            }
           }
         }
         sendRequest('POST', 'login', fLogin, datos);
@@ -305,7 +313,7 @@
         actualizarNombreEjercicio();
       } else {
         const ej = cursos[info.curso].cuestionarios[i];
-        if ('dni' in info) { localStorage.setItem(`ej ${info.dni}`, ej.nombre); }
+        if ('dni' in info) { localStorage.setItem(`ej ${info.dni}`, ej.id); }
         cargarEjercicio(ej);
       }
       pantallaWorkspace();
@@ -321,7 +329,7 @@
       if ('dni' in info) {
         let jsonObj = {
           dni: info.dni,
-          ejercicio: ej.nombre,
+          ejercicio: ej.id,
         };
         sendRequest('POST', 'open', function() {}, jsonObj);
       }
@@ -567,7 +575,7 @@
         pedirCursos(function() {
           actualizaCursoSeleccionado(aCargar.curso);
           if ('ej' in aCargar) {
-            let ejercicio = ejercicioDeNombre(cursos[info.curso].cuestionarios, aCargar.ej);
+            let ejercicio = ejercicioDeId(cursos[info.curso].cuestionarios, aCargar.ej);
             if (ejercicio === null) {
               seleccionarEjercicio(null);
             } else {
@@ -582,9 +590,9 @@
       }
     };
 
-    const ejercicioDeNombre = function(ejs, nombre) {
+    const ejercicioDeId = function(ejs, id) {
       for (let ej of ejs) {
-        if (ej.nombre == nombre) {
+        if (ej.id == id) {
           return ej;
         }
       }
@@ -594,17 +602,6 @@
     const cambiarDni = function() {
       pedirDni();
     };
-
-    const cursoSolicitado = parametroURL('curso');
-    if (cursoSolicitado !== null) {
-      window.force_ej = {curso: cursoSolicitado};
-      document.getElementById("abrirCurso").style.display = 'none';
-      const ejSolicitado = parametroURL('ej');
-      if (ejSolicitado !== null) {
-        window.force_ej.ej = ejSolicitado;
-        document.getElementById("abrirEjercicio").style.display = 'none';
-      }
-    }
 
     const mostrarCuestionario = function(cuestionario) {
       info.pagina = 0
@@ -699,16 +696,16 @@
         contenido.classList.add('pregunta');
         contenido.innerHTML = pregunta.pregunta;
         pagina.appendChild(contenido);
-        // if (pregunta.tipo) != 20 {
+        if (pregunta.tipo != "SOLO_TEXTO") {
           let respuestas = document.createElement('div');
           respuestas.classList.add('respuestas');
-          respuestas.innerHTML = `<span>Tu respuesta:</span>`;
+          respuestas.innerHTML = '<span>Tu respuesta:</span>';
           pagina.appendChild(respuestas);
           let opciones = document.createElement('div');
           opciones.classList.add('espacioRespuesta');
           respuestas.appendChild(opciones);
           completarOpciones(opciones, nPregunta)
-        // }
+        }
         pagina.appendChild(botonAtras());
         pagina.appendChild(botonSiguiente(
           info.pagina < info.ejercicio.solo_preguntas.length
@@ -721,7 +718,8 @@
     };
 
     const completarOpciones = function(opciones, nPregunta) {
-      // if (pregunta.tipo == 2 || pregunta.tipo == 3) {
+      let pregunta = info.ejercicio.solo_preguntas[nPregunta];
+      if (pregunta.tipo == "OPCION_MULTIPLE") {
         let textosRespuestas = info.ejercicio.solo_respuestas[nPregunta];
         for (let i=0; i < textosRespuestas.length; i++) {
           if (i>0) {
@@ -730,41 +728,55 @@
           }
           opciones.appendChild(botonRespuesta(nPregunta, i, textosRespuestas[i].texto, opciones));
         }
-      // }
+      }
     };
 
     const botonRespuesta = function(nPregunta, nRespuesta, texto, opciones) {
       let b = document.createElement('button');
-      b.innerHTML = texto;
+      b.innerHTML = texto.replaceAll("<p>", "<p style='margin:0px;'>");
       b.addEventListener('click', fResponder(nPregunta, nRespuesta, texto, opciones));
       return b;
     };
 
-    const fResponder = function(nPregunta, nRespuesta, texto, opciones) {
+    const fResponder = function(nPregunta, respuesta, texto, opciones) {
       return function() {
         opciones.innerHTML = texto;
         const datos = {
           usuario: info.dni,
           contrasenia: info.contrasenia,
-          cuestionario: info.ejercicio.nombre,
-          nPregunta, nRespuesta
+          curso: info.curso,
+          cuestionario: info.ejercicio.id,
+          nPregunta,
+          respuesta
         };
-        // sendRequest('POST', 'answer', fVerRespuesta(opciones, nPregunta), datos);
+        sendRequest('POST', 'answer', fVerRespuesta(opciones, nPregunta), datos);
       };
     };
 
-    const verRespuesta = function(opciones, nPregunta) {
+    const fVerRespuesta = function(opciones, nPregunta) {
       return function(jsonObj) {
-        /*
-        if ('correcto' in jsonObj) {
-          // Mostrar si es correcto o no
-        }
         if ('devolucion' in jsonObj) {
-          // Mostrar la devolución
+          devolucion = jsonObj.devolucion;
+          if ('correcto' in devolucion) {
+            // Mostrar si es correcto o no
+          }
+          if ('texto' in devolucion) {
+            opciones.appendChild(recuadroDevolucion(devolucion.texto));
+          }
         }
-        */
         opciones.appendChild(botonReintentar(opciones, nPregunta));
       }
+    };
+
+    const recuadroDevolucion = function(texto) {
+      let div = document.createElement('div');
+      div.classList.add('respuestas');
+      div.innerHTML = "<span>Devolución:</span>";
+      let devolucion = document.createElement('div');
+      devolucion.classList.add('espacioRespuesta');
+      devolucion.innerHTML = texto;
+      div.appendChild(devolucion);
+      return div;
     };
 
     const botonReintentar = function(opciones, nPregunta) {
@@ -776,4 +788,16 @@
       });
       return b;
     };
+
+    const cursoSolicitado = parametroURL('curso');
+    if (cursoSolicitado !== null) {
+      window.force_ej = {curso: cursoSolicitado};
+      document.getElementById("abrirCurso").style.display = 'none';
+      const ejSolicitado = parametroURL('ej');
+      if (ejSolicitado !== null) {
+        window.force_ej.ej = ejSolicitado;
+        document.getElementById("abrirEjercicio").style.display = 'none';
+      }
+    }
   </script>
+</html>
