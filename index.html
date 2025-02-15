@@ -190,6 +190,12 @@
       border-radius: 5px;
       background-color: #fff;
     }
+    .conIcono {
+      margin-left: 60;
+      position: relative;
+      top: -50;
+      margin-bottom: -50;
+    }
   </style>
   <div id="ui" style="display:block;">
     <div id="login" style="display:block;">
@@ -1122,7 +1128,9 @@
         if ('devolucion' in jsonObj) {
           devolucion = jsonObj.devolucion;
           if ('correcto' in devolucion) {
-            // Mostrar si es correcto o no
+            let respuestaElegida = opciones.childNodes[0];
+            respuestaElegida.classList.add('conIcono');
+            opciones.insertBefore(iconoDevolucion(devolucion.correcto), respuestaElegida);
           }
           if ('texto' in devolucion) {
             opciones.appendChild(recuadroDevolucion(devolucion.texto));
@@ -1141,6 +1149,13 @@
       devolucion.innerHTML = texto;
       div.appendChild(devolucion);
       return div;
+    };
+
+    const iconoDevolucion = function(correcto) {
+      let img = document.createElement('img');
+      img.setAttribute("src", `img/${correcto ? "ok" : "err"}.png`);
+      img.style.width = "40px";
+      return img;
     };
 
     const botonReintentar = function(opciones, nPregunta) {
