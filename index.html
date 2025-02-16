@@ -1000,9 +1000,33 @@
         let div = document.createElement('h3');
         div.innerHTML = cuestionario.nombre;
         pagina.appendChild(div);
-        pagina.appendChild(botonSiguiente("Comenzar"));
+        agregarDivBotones(pagina, cuestionario, 0);
       } else {
         pagina.style.display = 'block';
+      }
+    };
+
+    const agregarDivBotones = function(pagina, cuestionario, pg) {
+      botonesAAgregar = [];
+      if (pg > 0 && sePuedeRetroceder()) {
+        botonesAAgregar.push(botonAtras("Atrás"));
+      }
+      if (pg == 0) {
+        botonesAAgregar.push(botonSiguiente("Comenzar"));
+      } else if (sePuedenSaltearPreguntas()) {
+        botonesAAgregar.push(botonSiguiente(
+          pg < cuestionario.solo_preguntas.length
+          ? "Siguiente"
+          : "Finalizar"
+        ));
+      }
+      if (botonesAAgregar.length > 0) {
+        const divBotones = document.createElement('div');
+        divBotones.setAttribute("style","text-align: center;");
+        for (let b of botonesAAgregar) {
+          divBotones.appendChild(b);
+        }
+        pagina.appendChild(divBotones);
       }
     };
 
@@ -1013,9 +1037,9 @@
       return b;
     };
 
-    const botonAtras = function() {
+    const botonAtras = function(texto) {
       let b = document.createElement('button');
-      b.innerHTML = "Atrás";
+      b.innerHTML = texto;
       b.addEventListener('click', volverPagina);
       return b;
     };
@@ -1079,12 +1103,7 @@
           respuestas.appendChild(opciones);
           completarOpciones(opciones, nPregunta)
         }
-        pagina.appendChild(botonAtras());
-        pagina.appendChild(botonSiguiente(
-          info.pagina < info.actividad.solo_preguntas.length
-          ? "Siguiente"
-          : "Finalizar"
-        ));
+        agregarDivBotones(pagina, info.actividad, info.pagina);
       } else {
         pagina.style.display = 'block';
       }
@@ -1128,19 +1147,44 @@
 
     const fVerRespuesta = function(opciones, nPregunta) {
       return function(jsonObj) {
+        let sePuedeContinuar = true;
         if ('devolucion' in jsonObj) {
           devolucion = jsonObj.devolucion;
           if ('correcto' in devolucion) {
             let respuestaElegida = opciones.childNodes[0];
             respuestaElegida.classList.add('conIcono');
             opciones.insertBefore(iconoDevolucion(devolucion.correcto), respuestaElegida);
+            sePuedeContinuar = devolucion.correcto;
           }
           if ('texto' in devolucion) {
             opciones.appendChild(recuadroDevolucion(devolucion.texto));
           }
         }
-        opciones.appendChild(botonReintentar(opciones, nPregunta));
+        if (sePuedeReintentar()) {
+          opciones.appendChild(botonReintentar(opciones, nPregunta));
+        }
+        if (!sePuedenSaltearPreguntas()) {
+          if (!sePuedeReintentar() || sePuedeContinuar) {
+            opciones.appendChild(botonSiguiente(
+              info.pagina < info.actividad.solo_preguntas.length
+              ? "Siguiente"
+              : "Finalizar"
+            ));
+          }
+        }
       }
+    };
+
+    const sePuedeReintentar = function() {
+      return !('puedenReintentar' in info.actividad) || info.actividad.puedenReintentar;
+    };
+
+    const sePuedenSaltearPreguntas = function() {
+      return !('puedenSaltearPreguntas' in info.actividad) || info.actividad.puedenSaltearPreguntas;
+    };
+
+    const sePuedeRetroceder = function() {
+      return !('puedenRetroceder' in info.actividad) || info.actividad.puedenRetroceder;
     };
 
     const recuadroDevolucion = function(texto) {
