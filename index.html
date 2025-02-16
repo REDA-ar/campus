@@ -17,12 +17,15 @@
     let servidorManual = false;
 
     // Para iniciar con una IP de servidor particular (comentar para anular)
-    window.servidor = "192.168.0.12";
+    window.servidor = "192.168.0.16";
     // window.servidor = "157.92.26.235";
   </script>
   <style media="screen">
     body {
       background-color: #ccd;
+    }
+    div {
+      text-wrap: auto;
     }
     .line-numbers {
       width: 20px;
@@ -512,7 +515,7 @@
       }
       if ('dni' in info) {
         let jsonObj = {
-          dni: info.dni,
+          usuario: info.dni,
           actividad: actividad.id,
         };
         sendRequest('POST', 'open', function() {}, jsonObj);
@@ -613,7 +616,7 @@
         lenguaje:document.getElementById("selectorLenguaje").value,
       };
       if ('dni' in info && 'contrasenia' in info) {
-        jsonObj.dni = info.dni;
+        jsonObj.usuario = info.dni;
         jsonObj.contrasenia = info.contrasenia;
       } else if ('curso' in info) {
         pedirDni();
@@ -623,7 +626,7 @@
       if ('actividad' in info) {
         if ('curso' in info) {
           jsonObj.curso = info.curso;
-          jsonObj.ejercicio = info.actividad.id;
+          jsonObj.actividad = info.actividad.id;
         } else {
           jsonObj.ejercicio = info.actividad;
         }
@@ -646,7 +649,7 @@
             } else {
               alert(jsonObj.error);
             }
-          } else if (jsonObj.resultado == "Falla") {
+          } else if (jsonObj.resultado == "NO") {
             alert("El código funciona pero no cumple el enunciado");
           } else if (jsonObj.resultado == "OK") {
             alert('actividad' in info ? "Misión cumplida" : "Ok");
@@ -1115,7 +1118,7 @@
           usuario: info.dni,
           contrasenia: info.contrasenia,
           curso: info.curso,
-          cuestionario: info.actividad.id,
+          actividad: info.actividad.id,
           nPregunta,
           respuesta
         };
