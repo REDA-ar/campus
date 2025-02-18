@@ -1,0 +1,3 @@
+[submodule "milanator"]
+	path = milanator
+	url = https://github.com/gpfernandezflorio/milanator.git
