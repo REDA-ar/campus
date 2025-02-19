@@ -493,10 +493,15 @@
         cerrarPantallaEnunciado();
       } else {
         const actividad = cursos[info.curso].actividades[i];
-        if ('dni' in info) {
-          localStorage.setItem(`ej ${info.dni}`, actividad.id);
+        if (actividad.tipo == "LINK") {
+          notificarEjercicioAbierto(actividad.id);
+          open(actividad.url, "_blank");
+        } else {
+          if ('dni' in info) {
+            localStorage.setItem(`ej ${info.dni}`, actividad.id);
+          }
+          cargarEjercicio(actividad);
         }
-        cargarEjercicio(actividad);
       }
       pantallaWorkspace();
     };
@@ -513,15 +518,20 @@
       if ('lenguaje' in actividad) {
         document.getElementById("selectorLenguaje").value = actividad.lenguaje;
       }
-      if ('dni' in info) {
+      notificarEjercicioAbierto(actividad.id);
+      actualizarNombreEjercicio(actividad.nombre);
+      MostrarDataActividad(actividad);
+    };
+
+    const notificarEjercicioAbierto = function(id) {
+      if ('dni' in info && 'curso' in info) {
         let jsonObj = {
           usuario: info.dni,
-          actividad: actividad.id,
+          curso: info.curso,
+          actividad: id,
         };
         sendRequest('POST', 'open', function() {}, jsonObj);
       }
-      actualizarNombreEjercicio(actividad.nombre);
-      MostrarDataActividad(actividad);
     };
 
     const actualizarEnunciadoEjercicio = function(actividad) {
@@ -1268,6 +1278,8 @@
         return `<b>Ejercicio</b>: `
       } else if (actividad.tipo == "CUESTIONARIO") {
         return `<b>Cuestionario</b>: `
+      } else if (actividad.tipo == "LINK") {
+        return `<b>Enlace</b>: `
       }
       return "";
     };
