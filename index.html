@@ -199,6 +199,11 @@
       top: -50;
       margin-bottom: -50;
     }
+    .seccion {
+      font-size: 20px;
+      margin-top: 25px;
+      margin-bottom: -5px;
+    }
   </style>
   <div id="ui" style="display:block;">
     <div id="login" style="display:block;">
@@ -363,13 +368,15 @@
                 if (cursoPrevio !== null && cursoPrevio !== undefined) {
                   aCargar.curso = cursoPrevio;
                 } else {
-                  aCargar.dst = cargarCursos
+                  aCargar.dst = cargarCursos;
                 }
               }
               if ('curso' in aCargar && !('actividad' in aCargar)) {
                 let ejercicioPrevio = localStorage.getItem(`ej ${info.dni}`);
                 if (ejercicioPrevio !== null && ejercicioPrevio !== undefined) {
                   aCargar.actividad = ejercicioPrevio;
+                } else {
+                  aCargar.dst = abrirEjercicio;
                 }
               }
               cargarDatos(aCargar);
@@ -554,8 +561,10 @@
           actualizaCursoSeleccionado(k);
         }
         seleccionarEjercicio(null);
+        if (k !== '0') {
+          abrirEjercicio();
+        }
       }
-      pantallaWorkspace();
     };
 
     const actualizaCursoSeleccionado = function(k) {
@@ -754,7 +763,11 @@
       // contenidoPantalla += '<button onclick="seleccionarEjercicio(null);">Libre</button><br/>';
       let i=0;
       for (actividad of cursos[info.curso].actividades) {
-        contenidoPantalla += `${etiquetaActividad(actividad)}<button onclick="seleccionarEjercicio(${i});">${actividad.nombre}</button><br/>`;
+        if (actividad.tipo == "SECCION") {
+          contenidoPantalla += `<p class="seccion">${actividad.nombre}</p><br/>`;
+        } else {
+          contenidoPantalla += `${etiquetaActividad(actividad)}<button onclick="seleccionarEjercicio(${i});">${actividad.nombre}</button><br/>`;
+        }
         i++;
       }
       document.getElementById("seleccionDeCurso").innerHTML = contenidoPantalla +
