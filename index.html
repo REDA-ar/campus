@@ -23,6 +23,7 @@
   <style media="screen">
     body {
       background-color: #ccd;
+      font-family: sans-serif;
     }
     div {
       text-wrap: auto;
@@ -113,6 +114,7 @@
       border-style: solid;
       background-color: #fff;
       padding: 10px;
+      margin-top: 20px;
     }
     #labelDni {
       margin-right: 10px;
@@ -201,8 +203,45 @@
     }
     .seccion {
       font-size: 20px;
-      margin-top: 25px;
-      margin-bottom: -5px;
+      margin-top: 20px;
+      margin-bottom: -20px;
+      background-color: #ddf;
+      padding: 10px;
+      border-radius: 5px;
+    }
+    .actividad {
+      font-size: 13px;
+      border-style: solid;
+      border-width: 1px;
+      border-radius: 5px;
+      margin: 5px;
+      padding: 5px;
+    }
+    .habilitada {
+      cursor: pointer;
+      border-color: #888;
+    }
+    .CODIGO {
+      background-color: #fcc;
+    }
+    .LINK {
+      background-color: #acf;
+    }
+    .CUESTIONARIO {
+      background-color: #afa;
+    }
+    .deshabilitada {
+      cursor: not-allowed;
+      border-color: #fff;
+      opacity: 65%;
+    }
+    #seleccionDeCurso {
+      background-color: #fff;
+      height: calc(100% - 15px);
+      overflow-y: auto;
+      border: solid 1px;
+      border-radius: 5px 0px 0px 0px;
+      padding: 5px;
     }
   </style>
   <div id="ui" style="display:block;">
@@ -766,7 +805,14 @@
         if (actividad.tipo == "SECCION") {
           contenidoPantalla += `<p class="seccion">${actividad.nombre}</p><br/>`;
         } else {
-          contenidoPantalla += `${etiquetaActividad(actividad)}<button onclick="seleccionarEjercicio(${i});">${actividad.nombre}</button><br/>`;
+          const deshabilitada = 'activa' in actividad && actividad.activa == "NO"
+          const clase = `"actividad ${actividad.tipo} ${deshabilitada ? "deshabilitada" : "habilitada"}"`;
+          const accion = deshabilitada ? "" : ` onclick="seleccionarEjercicio(${i});"`;
+          contenidoPantalla += `<div class=${clase}${accion}>${etiquetaActividad(actividad)} <b>${actividad.nombre}</b><br/>`;
+          if (deshabilitada && 'disponible' in actividad) {
+            contenidoPantalla += mostrarRestriccionesDisponibilidad(actividad.disponible);
+          }
+          contenidoPantalla += "</div>"
         }
         i++;
       }
@@ -1288,13 +1334,36 @@
 
     const etiquetaActividad = function(actividad) {
       if (actividad.tipo == "CODIGO") {
-        return `<b>Ejercicio</b>: `
+        return `Ejercicio: `
       } else if (actividad.tipo == "CUESTIONARIO") {
-        return `<b>Cuestionario</b>: `
+        return `Cuestionario: `
       } else if (actividad.tipo == "LINK") {
-        return `<b>Enlace</b>: `
+        return `Enlace: `
       }
       return "";
+    };
+
+    const mostrarRestriccionesDisponibilidad = function(disponibilidad) {
+      let lista = [];
+      if ('desde' in disponibilidad) {
+        lista.push("Desde el día " + completarFechaYHora(disponibilidad.desde));
+      }
+      if ('hasta' in disponibilidad) {
+        lista.push("Hasta el día " + completarFechaYHora(disponibilidad.hasta));
+      }
+      if (lista.length > 0) {
+        return `<span style="padding-left: 20px;">Disponible: ${lista.join(" ; ")}</span><br/>`;
+      }
+      return "";
+    };
+
+    const completarFechaYHora = function(s) {
+      partes = s.split("-");
+      resultado = partes[0];
+      if (partes.length > 1) {
+        resultado += " a las " + partes[1];
+      }
+      return resultado;
     };
 
     const cursoSolicitado = parametroURL('curso');
