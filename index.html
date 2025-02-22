@@ -431,12 +431,12 @@
           }
         };
         const datos = {usuario, contrasenia, dataEjs:true};
-        if ('curso' in info) {
-          datos.curso = info.curso;
-          if ('actividad' in info) {
-            datos.actividad = info.actividad;
-          }
-        }
+        // if ('curso' in info) {
+        //   datos.curso = info.curso;
+        //   if ('actividad' in info) {
+        //     datos.actividad = info.actividad;
+        //   }
+        // }
         if ('actividad_obligatoria' in window) {
           if ('curso' in window.actividad_obligatoria) {
             datos.curso = window.actividad_obligatoria.curso;
@@ -592,7 +592,9 @@
     };
 
     const seleccionarCurso = function(k) {
-      if (k != info.curso) {
+      if (k == info.curso) {
+        pantallaWorkspace();
+      } else {
         if (k === '0') {
           actualizarNombreCurso();
           delete info.curso;
@@ -809,8 +811,11 @@
           const clase = `"actividad ${actividad.tipo} ${deshabilitada ? "deshabilitada" : "habilitada"}"`;
           const accion = deshabilitada ? "" : ` onclick="seleccionarEjercicio(${i});"`;
           contenidoPantalla += `<div class=${clase}${accion}>${etiquetaActividad(actividad)} <b>${actividad.nombre}</b><br/>`;
-          if (deshabilitada && 'disponible' in actividad) {
+          if ('disponible' in actividad) {
             contenidoPantalla += mostrarRestriccionesDisponibilidad(actividad.disponible);
+          }
+          if ('visible' in actividad) {
+            contenidoPantalla += mostrarRestriccionesVisibilidad(actividad.visible);
           }
           contenidoPantalla += "</div>"
         }
@@ -1344,17 +1349,47 @@
     };
 
     const mostrarRestriccionesDisponibilidad = function(disponibilidad) {
-      let lista = [];
-      if ('desde' in disponibilidad) {
-        lista.push("Desde el día " + completarFechaYHora(disponibilidad.desde));
+      let texto = "";
+      if (disponibilidad == "NO") {
+        texto = "No disponible";
+      } else {
+        let lista = [];
+        if ('desde' in disponibilidad) {
+          lista.push("Desde el día " + completarFechaYHora(disponibilidad.desde));
+        }
+        if ('hasta' in disponibilidad) {
+          lista.push("Hasta el día " + completarFechaYHora(disponibilidad.hasta));
+        }
+        if (lista.length > 0) {
+          texto = `Disponible: ${lista.join(" ; ")}`;
+        }
       }
-      if ('hasta' in disponibilidad) {
-        lista.push("Hasta el día " + completarFechaYHora(disponibilidad.hasta));
+      if (texto.length > 0) {
+        texto = `<span style="padding-left: 20px;">${texto}</span><br/>`;
       }
-      if (lista.length > 0) {
-        return `<span style="padding-left: 20px;">Disponible: ${lista.join(" ; ")}</span><br/>`;
+      return texto;
+    };
+
+    const mostrarRestriccionesVisibilidad = function(visibilidad) {
+      let texto = "";
+      if (visibilidad == "NO") {
+        texto = "Oculto";
+      } else {
+        let lista = [];
+        if ('desde' in visibilidad) {
+          lista.push("Desde el día " + completarFechaYHora(visibilidad.desde));
+        }
+        if ('hasta' in visibilidad) {
+          lista.push("Hasta el día " + completarFechaYHora(visibilidad.hasta));
+        }
+        if (lista.length > 0) {
+          texto = `Visible: ${lista.join(" ; ")}`;
+        }
       }
-      return "";
+      if (texto.length > 0) {
+        texto = `<span style="padding-left: 20px;">${texto}</span><br/>`;
+      }
+      return texto;
     };
 
     const completarFechaYHora = function(s) {
