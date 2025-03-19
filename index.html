@@ -17,7 +17,7 @@
     let servidorManual = false;
 
     // Para iniciar con una IP de servidor particular (comentar para anular)
-    window.servidor = "192.168.0.16";
+    window.servidor = "192.168.0.96";
     // window.servidor = "157.92.26.235";
   </script>
   <style media="screen">
@@ -243,6 +243,12 @@
       border-radius: 5px 0px 0px 0px;
       padding: 5px;
     }
+    .edicion {
+      margin: -10px 0px 5px 10px;
+    }
+    .botonAgregar {
+      width: 100%;
+    }
   </style>
   <div id="ui" style="display:block;">
     <div id="login" style="display:block;">
@@ -286,6 +292,8 @@
         <span id="curso">
           Curso: <span id="cursoSeleccionado">Ninguno</span>
           <button id="abrirCurso" onclick="cargarCursos();">Abrir</button>
+          <!-- Quizás en lugar de esto un check "habilitar edición" como en moodle -->
+          <!-- <button id="editarCurso" onclick="editarCurso();">Editar</button> -->
           <span> - </span>
         </span>
         Actividad: <span id="ejercicioSeleccionado">Ninguna</span>
@@ -803,6 +811,10 @@
       let contenidoPantalla = '<h2>Seleccione una actividad</h2>';
       // contenidoPantalla += '<button onclick="seleccionarEjercicio(null);">Libre</button><br/>';
       let i=0;
+      const permisoEdicion = tengoPermisoPara("EDITAR_CONTENIDO");
+      if (permisoEdicion) {
+        contenidoPantalla += botonAgregar(0);
+      }
       for (actividad of cursos[info.curso].actividades) {
         if (actividad.tipo == "SECCION") {
           contenidoPantalla += `<p class="seccion">${actividad.nombre}</p><br/>`;
@@ -817,12 +829,38 @@
           if ('visible' in actividad) {
             contenidoPantalla += mostrarRestriccionesVisibilidad(actividad.visible);
           }
-          contenidoPantalla += "</div>"
+          contenidoPantalla += "</div>";
+          if (permisoEdicion) {
+            contenidoPantalla += panelEdicion(i);
+          }
         }
         i++;
       }
       document.getElementById("seleccionDeCurso").innerHTML = contenidoPantalla +
         '<button onclick="pantallaWorkspace();">Cancelar</button>';
+    };
+
+    const tengoPermisoPara = function(p) {
+      const permisos = cursos[info.curso].permisos;
+      for (let rol in permisos) {
+        if (permisos[rol] == "TODO" && p != "SALIR") {
+          return true;
+        }
+        if (permisos[rol] != "TODO" && permisos[rol].includes(p)) {
+          return true;
+        }
+      }
+      return false;
+    };
+
+    const panelEdicion = function(i) {
+      let resultado = "<div class='edicion'>";
+      resultado += "<button>Editar</button>";
+      return `${resultado}</div>` + botonAgregar(i+1);
+    };
+
+    const botonAgregar = function(i) {
+      return "<button class='botonAgregar'>+</button>";
     };
 
     const sendRequest = function(method, path, callback, jsonObj, failCallback, timeout=2) {
