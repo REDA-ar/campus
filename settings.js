@@ -4,7 +4,7 @@
 
 // URL del servidor
 // const urlServidor = "https://epli.exp.dc.uba.ar"
-const urlServidor = "http://157.92.26.79:8060"
+const urlServidor = "https://robotutor.exp.dc.uba.ar"
 // ¿Está habilitado el servidor de redirección?
 const servidorDeRedireccion = false;
 const puertoInicial = 8040; // En caso de usar el servidor de redirección
