@@ -8,6 +8,10 @@
     body {
       background-color: #ccd;
       font-family: sans-serif;
+      overflow: hidden;
+      height: -moz-calc(100vh - 16px);
+      height: -webkit-calc(100vh - 16px);
+      height: calc(100vh - 16px);
     }
     div {
       text-wrap: auto;
@@ -234,7 +238,7 @@
       width: 100%;
     }
   </style>
-  <div id="ui" style="display:block;">
+  <div id="ui" style="display:block;height: 100%;">
     <div id="login" style="display:block;">
       <div class="formLogin">
         <div class="formContent">
@@ -271,7 +275,7 @@
       </div>
     </div>
     <div id="seleccionDeCurso" style="display:none;"></div>
-    <div id="workspace" style="display:none;">
+    <div id="workspace" style="display:none;height: 100%;">
       <div class="floatBar" style="top: 5px;">
         <span id="curso">
           Curso: <span id="cursoSeleccionado">Ninguno</span>
