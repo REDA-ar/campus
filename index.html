@@ -32,6 +32,8 @@
     }
     #src {
       border-color: #fff;
+      min-width:-moz-calc(100% - 20px);
+      min-width:-webkit-calc(100% - 20px);
       min-width:calc(100% - 20px);
       outline: none;
       resize: none;
@@ -40,6 +42,8 @@
       padding: 0;
     }
     .editor {
+      min-width:-moz-calc(100% - 10px);
+      min-width:-webkit-calc(100% - 10px);
       min-width:calc(100% - 10px);
       display: inline-flex;
       font-family: monospace;
@@ -47,6 +51,8 @@
       gap: 10px;
     }
     .editorWrapper {
+      height: -moz-calc(100% - 69px);
+      height: -webkit-calc(100% - 69px);
       height: calc(100% - 69px);
       overflow-y: auto;
       border: solid 1px #000;
@@ -132,8 +138,9 @@
       border-radius: 10px;
       background-color: #fff;
       margin: 5px;
-      height: -webkit-fill-available;
       height: -moz-available;
+      height: -webkit-fill-available;
+      height: fill-available;
       float:right;
       right: 0px;
       position: absolute;
@@ -145,8 +152,9 @@
       display: block;
     }
     .full {
-      width: -webkit-fill-available;
       width: -moz-available;
+      width: -webkit-fill-available;
+      width: fill-available;
     }
     .half {
       width: 40%;
@@ -158,6 +166,8 @@
       font-size: larger;
     }
     #cuestionario {
+      height: -moz-calc(100% - 73px);
+      height: -webkit-calc(100% - 73px);
       height: calc(100% - 73px);
       overflow-y: auto;
       border: solid 1px #000;
@@ -224,12 +234,26 @@
       opacity: 65%;
     }
     #seleccionDeCurso {
-      background-color: #fff;
-      height: calc(100% - 15px);
-      overflow-y: auto;
+      height: 100%;
+      overflow: hidden;
+    }
+    .opcionesSelector {
       border: solid 1px;
       border-radius: 5px 0px 0px 0px;
       padding: 5px;
+      background-color: #fff;
+      height: -moz-calc(100% - 95px);
+      height: -webkit-calc(100% - 95px);
+      height: calc(100% - 95px);
+      margin-bottom: 10px;
+      overflow-y: auto;
+    }
+    .tituloSelector {
+      background-color: #fff;
+      padding: 5px;
+      margin-top: 5px;
+      border-radius: 5px;
+      border: solid 1px;
     }
     .edicion {
       margin: -10px 0px 5px 10px;
@@ -730,15 +754,16 @@
 
     const cargarCursos = function() {
       pedirCursos(function() {
-        let contenidoPantalla = '<h2>Seleccione un curso</h2>';
+        let contenidoPantalla = '';
         // contenidoPantalla += '<button onclick="seleccionarCurso(\'0\');">Libre</button><br/>';
         for (c in cursos) {
           contenidoPantalla += `<div class="dataCurso"><button onclick="seleccionarCurso('${c}');">${cursos[c]["info"].nombre}</button><br/>`;
           contenidoPantalla += informacionCurso(cursos[c]["info"]) + '</div>';
         }
-        document.getElementById("seleccionDeCurso").innerHTML = contenidoPantalla /*+
-          '<button onclick="pantallaWorkspace();">Cancelar</button>'*/;
-          pantallaSelector();
+        document.getElementById("seleccionDeCurso").innerHTML = `<h3 class="tituloSelector">Seleccione un curso</h3><div class="opcionesSelector">${
+          contenidoPantalla
+        }</div>`/* + '<button onclick="pantallaWorkspace();">Cancelar</button>'*/;
+        pantallaSelector();
       });
     };
 
@@ -796,7 +821,7 @@
     };
 
     const cargarEjercicios = function() {
-      let contenidoPantalla = '<h2>Seleccione una actividad</h2>';
+      let contenidoPantalla = '';
       // contenidoPantalla += '<button onclick="seleccionarEjercicio(null);">Libre</button><br/>';
       let i=0;
       const permisoEdicion = tengoPermisoPara("EDITAR_CONTENIDO");
@@ -811,21 +836,24 @@
           const clase = `"actividad ${actividad.tipo} ${deshabilitada ? "deshabilitada" : "habilitada"}"`;
           const accion = deshabilitada ? "" : ` onclick="seleccionarEjercicio(${i});"`;
           contenidoPantalla += `<div class=${clase}${accion}>${etiquetaActividad(actividad)} <b>${actividad.nombre}</b><br/>`;
-          if ('disponible' in actividad) {
-            contenidoPantalla += mostrarRestriccionesDisponibilidad(actividad.disponible);
-          }
-          if ('visible' in actividad) {
-            contenidoPantalla += mostrarRestriccionesVisibilidad(actividad.visible);
+          if (permisoEdicion || (!permisoEdicion && deshabilitada)) {
+            if ('disponible' in actividad) {
+              contenidoPantalla += mostrarRestriccionesDisponibilidad(actividad.disponible);
+            }
+            if ('visible' in actividad) {
+              contenidoPantalla += mostrarRestriccionesVisibilidad(actividad.visible);
+            }
           }
           contenidoPantalla += "</div>";
-          if (permisoEdicion) {
-            contenidoPantalla += panelEdicion(i);
-          }
+        }
+        if (permisoEdicion) {
+          contenidoPantalla += panelEdicion(i);
         }
         i++;
       }
-      document.getElementById("seleccionDeCurso").innerHTML = contenidoPantalla +
-        '<button onclick="pantallaWorkspace();">Cancelar</button>';
+      document.getElementById("seleccionDeCurso").innerHTML = `<h3 class="tituloSelector">Seleccione una actividad</h3><div class="opcionesSelector">${
+        contenidoPantalla
+      }</div><button onclick="pantallaWorkspace();">Cancelar</button>`;
     };
 
     const tengoPermisoPara = function(p) {
