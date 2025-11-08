@@ -733,6 +733,8 @@
             alert("El código funciona pero no cumple el enunciado");
           } else if (jsonObj.resultado == "OK") {
             alert('actividad' in info ? "Misión cumplida" : "Ok");
+          } else if (jsonObj.resultado == "SERVER_BUG") {
+            alert("Felicitaciones, encontraste un bug en el servidor. Ya fue reportado. Te avisaremos en cuanto lo hayamos solucionado.");
           }
         } else {
           alert("ERROR: resultado faltante");
