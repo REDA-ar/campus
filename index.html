@@ -206,6 +206,7 @@
       background-color: #ddf;
       padding: 10px;
       border-radius: 5px;
+      cursor: pointer;
     }
     .actividad {
       font-size: 13px;
@@ -218,6 +219,12 @@
     .habilitada {
       cursor: pointer;
       border-color: #888;
+    }
+    .contenidoSeccion {
+      border-style: solid;
+      border-radius: 0px 0px 5px 5px;
+      border-width: 0px 1px 1px 1px;
+      padding: 5px;
     }
     .CODIGO {
       background-color: #fcc;
@@ -558,7 +565,7 @@
         textSet('');
         cerrarPantallaEnunciado();
       } else {
-        const actividad = cursos[info.curso].actividades[i];
+        const actividad = cursos[info.curso].actividades_por_id[i];
         if (actividad.tipo == "LINK") {
           notificarEjercicioAbierto(actividad.id);
           open(actividad.url, "_blank");
@@ -815,6 +822,7 @@
         }
         for (let k in jsonObj.cursos) {
           cursos[k] = jsonObj.cursos[k];
+          RegistrarActividadesPorId(cursos[k])
         }
         if (opt_f){
           opt_f();
@@ -822,40 +830,60 @@
       }
     };
 
+    const RegistrarActividadesPorId = function(curso) {
+      curso.actividades_por_id = {};
+      RegistrarListaDeActividadesPorId(curso, curso.actividades || []);
+    };
+
+    const RegistrarListaDeActividadesPorId = function(curso, lista) {
+      for (let actividad of lista) {
+        RegistrarActividadPorId(curso, actividad);
+      }
+    };
+
+    const RegistrarActividadPorId = function(curso, actividad) {
+      curso.actividades_por_id[actividad.id] = actividad;
+      RegistrarListaDeActividadesPorId(curso, actividad.actividades || []);
+    };
+
     const cargarEjercicios = function() {
       let contenidoPantalla = '';
       // contenidoPantalla += '<button onclick="seleccionarEjercicio(null);">Libre</button><br/>';
-      let i=0;
       const permisoEdicion = tengoPermisoPara("EDITAR_CONTENIDO");
       if (permisoEdicion) {
-        contenidoPantalla += botonAgregar(0);
+        contenidoPantalla += botonAgregar(null);
       }
       for (actividad of cursos[info.curso].actividades) {
-        if (actividad.tipo == "SECCION") {
-          contenidoPantalla += `<p class="seccion">${actividad.nombre}</p><br/>`;
-        } else {
-          const deshabilitada = 'activa' in actividad && actividad.activa == "NO"
-          const clase = `"actividad ${actividad.tipo} ${deshabilitada ? "deshabilitada" : "habilitada"}"`;
-          const accion = deshabilitada ? "" : ` onclick="seleccionarEjercicio(${i});"`;
-          contenidoPantalla += `<div class=${clase}${accion}>${etiquetaActividad(actividad)} <b>${actividad.nombre}</b><br/>`;
-          if (permisoEdicion || (!permisoEdicion && deshabilitada)) {
-            if ('disponible' in actividad) {
-              contenidoPantalla += mostrarRestriccionesDisponibilidad(actividad.disponible);
-            }
-            if ('visible' in actividad) {
-              contenidoPantalla += mostrarRestriccionesVisibilidad(actividad.visible);
-            }
-          }
-          contenidoPantalla += "</div>";
-        }
-        if (permisoEdicion) {
-          contenidoPantalla += panelEdicion(i);
-        }
-        i++;
+        contenidoPantalla += divActividad(actividad, permisoEdicion);
       }
       document.getElementById("seleccionDeCurso").innerHTML = `<h3 class="tituloSelector">Seleccione una actividad</h3><div class="opcionesSelector">${
         contenidoPantalla
       }</div><button onclick="pantallaWorkspace();">Cancelar</button>`;
+    };
+
+    const divActividad = function(actividad, permisoEdicion) {
+      let contenido = "";
+      if (actividad.tipo == "SECCION") {
+        contenido = divSección(actividad, permisoEdicion);
+      } else {
+        const deshabilitada = 'activa' in actividad && actividad.activa == "NO"
+        const clase = `"actividad ${actividad.tipo} ${deshabilitada ? "deshabilitada" : "habilitada"}"`;
+        const accion = deshabilitada ? "" : ` onclick="seleccionarEjercicio('${actividad.id}');"`;
+        contenido = `<div class=${clase}${accion}>${etiquetaActividad(actividad)} <b>${actividad.nombre}</b><br/>`;
+        if (permisoEdicion || (!permisoEdicion && deshabilitada)) {
+          if ('disponible' in actividad) {
+            contenido += mostrarRestriccionesDisponibilidad(actividad.disponible);
+          }
+          if ('visible' in actividad) {
+            contenido += mostrarRestriccionesVisibilidad(actividad.visible);
+          }
+        }
+        contenido += "</div>";
+      }
+      if (permisoEdicion) {
+        contenido += panelEdicion(actividad);
+      }
+      return contenido;
     };
 
     const tengoPermisoPara = function(p) {
@@ -871,14 +899,34 @@
       return false;
     };
 
-    const panelEdicion = function(i) {
+    const panelEdicion = function(actividad) {
       let resultado = "<div class='edicion'>";
       resultado += "<button>Editar</button>";
-      return `${resultado}</div>` + botonAgregar(i+1);
+      return `${resultado}</div>` + botonAgregar(actividad.id);
     };
 
-    const botonAgregar = function(i) {
+    const botonAgregar = function(idActividadAnterior) {
+      // Si el argumento es null, se agrega como primera actividad
       return "<button class='botonAgregar'>+</button>";
+    };
+
+    const divSección = function(sección, permisoEdicion) {
+      let contenido = `<p class="seccion" onclick="mostrarSección('${sección.id}')">${sección.nombre}</p><br/>`;
+      contenido += `<div class="contenidoSeccion" id="divSección_${sección.id}" style="display:none;">${
+        ("actividades" in sección)
+        ? sección.actividades.map(a => divActividad(a, permisoEdicion)).join("")
+        : ""
+      }</div>`;
+      return contenido;
+    };
+
+    const mostrarSección = function(idSección) {
+      let div = document.getElementById(`divSección_${idSección}`);
+      if (div.style.display == "none") {
+        div.style.display = "block";
+      } else {
+        div.style.display = "none";
+      }
     };
 
     const sendRequest = function(method, path, callback, jsonObj, failCallback, timeout=2) {
