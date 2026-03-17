@@ -209,7 +209,6 @@
       background-color: #ddf;
       padding: 10px;
       border-radius: 5px;
-      cursor: pointer;
     }
     .actividad {
       font-size: 13px;
@@ -867,27 +866,29 @@
 
     const divActividad = function(actividad, permisoEdicion) {
       let contenido = "";
+      const deshabilitada = 'activa' in actividad && actividad.activa == "NO";
       if (actividad.tipo == "SECCION") {
-        contenido = divSección(actividad, permisoEdicion);
+        contenido = divSección(actividad, permisoEdicion, deshabilitada);
       } else {
-        const deshabilitada = 'activa' in actividad && actividad.activa == "NO"
         const clase = `"actividad ${actividad.tipo} ${deshabilitada ? "deshabilitada" : "habilitada"}"`;
         const accion = deshabilitada ? "" : ` onclick="seleccionarEjercicio('${actividad.id}');"`;
-        contenido = `<div class=${clase}${accion}>${etiquetaActividad(actividad)} <b>${actividad.nombre}</b><br/>`;
-        if (permisoEdicion || (!permisoEdicion && deshabilitada)) {
-          if ('disponible' in actividad) {
-            contenido += mostrarRestriccionesDisponibilidad(actividad.disponible);
-          }
-          if ('visible' in actividad) {
-            contenido += mostrarRestriccionesVisibilidad(actividad.visible);
-          }
-        }
+        contenido = `<div class=${clase}${accion}>${etiquetaActividad(actividad)} <b>${actividad.nombre}</b><br/>` + restriccionesDeAcceso(actividad, permisoEdicion, deshabilitada);
         contenido += "</div>";
       }
       if (permisoEdicion) {
         contenido += panelEdicion(actividad);
       }
       return contenido;
+    };
+
+    const restriccionesDeAcceso = function(actividad, permisoEdicion, deshabilitada) {
+      return (permisoEdicion || (!permisoEdicion && deshabilitada))
+        ? ((('disponible' in actividad)
+            ? mostrarRestriccionesDisponibilidad(actividad.disponible) : ""
+          ) + (('visible' in actividad)
+            ? mostrarRestriccionesVisibilidad(actividad.visible) : ""
+          ))
+        : "";
     };
 
     const tengoPermisoPara = function(p) {
@@ -914,8 +915,12 @@
       return "<button class='botonAgregar'>+</button>";
     };
 
-    const divSección = function(sección, permisoEdicion) {
-      let contenido = `<p class="seccion" onclick="mostrarSección('${sección.id}')">${sección.nombre}</p><br/>`;
+    const divSección = function(sección, permisoEdicion, deshabilitada) {
+      let contenido = `<p class="seccion ${
+        deshabilitada ? "deshabilitada" : "habilitada"
+      }" onclick="${
+        deshabilitada ? "" : `mostrarSección('${sección.id}')`
+      }">${sección.nombre}<br/>${restriccionesDeAcceso(sección, permisoEdicion, deshabilitada)}</p><br/>`;
       contenido += `<div class="contenidoSeccion" id="divSección_${sección.id}" style="display:none;">${
         ("actividades" in sección)
         ? sección.actividades.map(a => divActividad(a, permisoEdicion)).join("")
