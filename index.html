@@ -625,6 +625,7 @@
       if (k == info.curso) {
         pantallaWorkspace();
       } else {
+        LimpiarContenidoActividadAnterior();
         if (k === '0') {
           actualizarNombreCurso();
           delete info.curso;
@@ -1242,6 +1243,7 @@
           localStorage.removeItem(`ej ${info.dni}`);
           localStorage.removeItem(`pg ${info.actividad.id} ${info.dni}`);
         }
+        abrirEjercicio();
       }
     };
 
