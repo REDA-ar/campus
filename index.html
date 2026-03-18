@@ -481,11 +481,11 @@
     };
 
     const errorLogin = function(s) {
-      document.getElementById("errorLogin").innerHTML = `Error: ${s}`;
+      document.getElementById("errorLogin").textContent = `Error: ${s}`;
     };
 
     const limpiarErrorLogin = function() {
-      document.getElementById("errorLogin").innerHTML = '';
+      document.getElementById("errorLogin").textContent = '';
     };
 
     const cancelLogin = function() {
@@ -524,7 +524,7 @@
     };
 
     const pantallaEnunciado = function(actividad) {
-      document.getElementById("tituloEnunciado").innerHTML = actividad.nombre;
+      document.getElementById("tituloEnunciado").textContent = actividad.nombre;
       Renderizar_En_(actividad.enunciado, document.getElementById("contenidoEnunciado"));
       document.getElementById("pantallaEnunciado").style.display = '';
     };
@@ -535,10 +535,10 @@
       const pantalla = document.getElementById("pantallaEnunciado");
       if (pantalla.className.includes('full')) {
         pantalla.className = pantalla.className.replace('full', 'half');
-        document.getElementById("moverEnunciado").innerHTML = "&lt;&lt;";
+        document.getElementById("moverEnunciado").textContent = "&lt;&lt;";
       } else {
         pantalla.className = pantalla.className.replace('half', 'full');
-        document.getElementById("moverEnunciado").innerHTML = "&gt;&gt;";
+        document.getElementById("moverEnunciado").textContent = "&gt;&gt;";
       }
     };
 
@@ -584,8 +584,8 @@
     };
 
     const actualizarNombreEjercicio = function(n) {
-      document.getElementById('ejercicioSeleccionado').innerHTML = (n === undefined ? 'Ninguna' : n);
-      document.getElementById("abrirEjercicio").innerHTML = (n === undefined ? 'Abrir' : 'Cambiar');
+      document.getElementById('ejercicioSeleccionado').textContent = (n === undefined ? 'Ninguna' : n);
+      document.getElementById("abrirEjercicio").textContent = (n === undefined ? 'Abrir' : 'Cambiar');
     };
 
     const actualizaEjercicioSeleccionado = function(actividad) {
@@ -654,13 +654,13 @@
 
     const actualizarNombreCurso = function(n) {
       if (n === undefined) {
-        document.getElementById("cursoSeleccionado").innerHTML = "Ninguno";
-        document.getElementById("abrirCurso").innerHTML = "Abrir";
+        document.getElementById("cursoSeleccionado").textContent = "Ninguno";
+        document.getElementById("abrirCurso").textContent = "Abrir";
         document.getElementById("lenguaje").style.display = 'inline';
         if ('dni' in info) { localStorage.removeItem(`curso ${info.dni}`); }
       } else {
-        document.getElementById("cursoSeleccionado").innerHTML = n;
-        document.getElementById("abrirCurso").innerHTML = "Cambiar";
+        document.getElementById("cursoSeleccionado").textContent = n;
+        document.getElementById("abrirCurso").textContent = "Cambiar";
         if ('dni' in info) { localStorage.setItem(`curso ${info.dni}`, info.curso); }
       }
     };
@@ -768,38 +768,109 @@
 
     const cargarCursos = function() {
       pedirCursos(function() {
-        let contenidoPantalla = '';
-        // contenidoPantalla += '<button onclick="seleccionarCurso(\'0\');">Libre</button><br/>';
-        for (c in cursos) {
-          contenidoPantalla += `<div class="dataCurso"><button onclick="seleccionarCurso('${c}');">${cursos[c]["info"].nombre}</button><br/>`;
-          contenidoPantalla += informacionCurso(cursos[c]["info"]) + '</div>';
-        }
-        document.getElementById("seleccionDeCurso").innerHTML = `<h3 class="tituloSelector">Seleccione un curso</h3><div class="opcionesSelector">${
-          contenidoPantalla
-        }</div>`/* + '<button onclick="pantallaWorkspace();">Cancelar</button>'*/;
+        const selector = document.getElementById("seleccionDeCurso");
+        selector.textContent = '';
+        selector.appendChild(h3("Seleccione un curso", "tituloSelector"));
+        selector.appendChild(divSelectoresCurso());
+        // selector.appendChild(botón("Cancelar", "pantallaWorkspace();"));
         pantallaSelector();
       });
     };
 
+    const div = function(clase) {
+      const resultado = document.createElement('div');
+      resultado.setAttribute('class', clase);
+      return resultado;
+    };
+
+    const par = function(clase) {
+      const resultado = document.createElement('p');
+      resultado.setAttribute('class', clase);
+      return resultado;
+    };
+
+    const h3 = function(texto, clase) {
+      const resultado = document.createElement('h3');
+      resultado.textContent = texto;
+      resultado.setAttribute('class', clase);
+      return resultado;
+    };
+
+    const botón = function(texto, callback) {
+      const resultado = document.createElement('button');
+      resultado.textContent = texto;
+      resultado.setAttribute('onclick', callback);
+      return resultado;
+    };
+
+    const br = function() {
+      const resultado = document.createElement('br');
+      return resultado;
+    };
+
+    const bold = function(texto) {
+      const resultado = document.createElement('b');
+      resultado.textContent = texto;
+      return resultado;
+    };
+
+    const span = function(texto) {
+      const resultado = document.createElement('span');
+      resultado.textContent = texto;
+      return resultado;
+    };
+
+    const link = function(texto, href) {
+      const resultado = document.createElement('a');
+      resultado.textContent = texto;
+      resultado.setAttribute('href', href);
+      return resultado;
+    };
+
+    const divSelectoresCurso= function() {
+      const resultado = div("opcionesSelector");
+      // resultado.appendChild(botón("Libre", "seleccionarCurso('0');"));
+      // resultado.appendChild(br());
+      for (c in cursos) {
+        resultado.appendChild(divSelecciónCurso(c));
+      }
+      return resultado;
+    };
+
+    const divSelecciónCurso = function(c) {
+      const resultado = div("dataCurso");
+      resultado.appendChild(botón(cursos[c]["info"].nombre, `seleccionarCurso('${c}');`));
+      resultado.appendChild(br());
+      for (let dato of informacionCurso(cursos[c]["info"])) {
+        resultado.appendChild(dato);
+      }
+      return resultado;
+    };
+
     const datosCurso = {
       descripcion:{title:"Detalle"},
-      anio:{title:"Año",next:', '},
+      anio:{title:"Año",next:() => span(', ')},
       edicion:{title:"Edición"},
       institucion:{title:"Institución"},
       responsable:{title:"Responsables", show:function(r) {
-        let showUno = (x) => x.nombre + ('contacto' in x ? ` (${mostrarMail(x.contacto)})` : '');
-        return Array.isArray(r) ? '<br/>' + r.join('<br/>') : showUno(r);
+        let showUno = (x) => [span(x.nombre)].concat('contacto' in x ? [span(' ('), mostrarMail(x.contacto), span(')')] : []);
+        return Array.isArray(r) ? [].reduce((rec, x) => rec.concat([br()].concat(showUno(x)))) : showUno(r);
       }},
     };
     const mostrarMail = function(mailEncriptado) {
-      return `<a href="mailto:${mailEncriptado.replace(" (AT) ","@")}">${mailEncriptado}</a>`;
+      return link(mailEncriptado, `mailto:${mailEncriptado.replace(" (AT) ","@")}`);
     };
     const informacionCurso = function(curso) {
-      let resultado = '';
+      let resultado = [];
       for (let k in datosCurso) {
-        let show = 'show' in datosCurso[k] ? datosCurso[k].show : (x) => `${x}`;
-        let next = 'next' in datosCurso[k] ? datosCurso[k].next : '<br/>';
-        resultado += `<b>${datosCurso[k].title}</b>: ${show(curso[k])}${next}`;
+        let show = ('show' in datosCurso[k]) ? datosCurso[k].show : (x) => [span(x)];
+        let next = ('next' in datosCurso[k]) ? datosCurso[k].next : br;
+        resultado.push(bold(datosCurso[k].title));
+        resultado.push(span(': '));
+        for (let i of show(curso[k])) {
+          resultado.push(i);
+        }
+        resultado.push(next());
       }
       return resultado;
     };
@@ -852,45 +923,65 @@
     };
 
     const cargarEjercicios = function() {
-      let contenidoPantalla = '';
-      // contenidoPantalla += '<button onclick="seleccionarEjercicio(null);">Libre</button><br/>';
+      const selector = document.getElementById("seleccionDeCurso");
+      selector.textContent = '';
+      selector.appendChild(h3("Seleccione una actividad", "tituloSelector"));
+      selector.appendChild(divSelectoresActividad());
+      // selector.appendChild(botón("Cancelar", "pantallaWorkspace();"));
+    };
+
+    const divSelectoresActividad= function() {
+      const resultado = div("opcionesSelector");
+      // resultado.appendChild(botón("Libre", "seleccionarCurso(null);"));
+      // resultado.appendChild(br());
       const permisoEdicion = tengoPermisoPara("EDITAR_CONTENIDO");
       if (permisoEdicion) {
-        contenidoPantalla += botonAgregar(null);
+        resultado.appendChild(botonAgregar(null))
       }
       for (actividad of cursos[info.curso].actividades) {
-        contenidoPantalla += divActividad(actividad, permisoEdicion);
+        for (let e of divActividad(actividad, permisoEdicion)) {
+          resultado.appendChild(e);
+        }
       }
-      document.getElementById("seleccionDeCurso").innerHTML = `<h3 class="tituloSelector">Seleccione una actividad</h3><div class="opcionesSelector">${
-        contenidoPantalla
-      }</div><button onclick="pantallaWorkspace();">Cancelar</button>`;
+      return resultado;
     };
 
     const divActividad = function(actividad, permisoEdicion) {
-      let contenido = "";
+      let contenido = [];
       const deshabilitada = 'activa' in actividad && actividad.activa == "NO";
       if (actividad.tipo == "SECCION") {
-        contenido = divSección(actividad, permisoEdicion, deshabilitada);
+        contenido = contenido.concat(divSección(actividad, permisoEdicion, deshabilitada));
       } else {
-        const clase = `"actividad ${actividad.tipo} ${deshabilitada ? "deshabilitada" : "habilitada"}"`;
-        const accion = deshabilitada ? "" : ` onclick="seleccionarEjercicio('${actividad.id}');"`;
-        contenido = `<div class=${clase}${accion}>${etiquetaActividad(actividad)} <b>${actividad.nombre}</b><br/>` + restriccionesDeAcceso(actividad, permisoEdicion, deshabilitada);
-        contenido += "</div>";
+        const clase = `actividad ${actividad.tipo} ${deshabilitada ? "deshabilitada" : "habilitada"}`;
+        const d = div(clase);
+        if (!deshabilitada) {
+          d.setAttribute('onclick', `seleccionarEjercicio('${actividad.id}');`);
+        }
+        d.appendChild(span(`${etiquetaActividad(actividad)} `));
+        d.appendChild(bold(actividad.nombre));
+        d.appendChild(br());
+        for (let r of restriccionesDeAcceso(actividad, permisoEdicion, deshabilitada)) {
+          d.appendChild(r);
+        }
+        contenido.push(d);
       }
       if (permisoEdicion) {
-        contenido += panelEdicion(actividad);
+        contenido = contenido.concat(panelEdicion(actividad));
       }
       return contenido;
     };
 
     const restriccionesDeAcceso = function(actividad, permisoEdicion, deshabilitada) {
-      return (permisoEdicion || (!permisoEdicion && deshabilitada))
-        ? ((('disponible' in actividad)
-            ? mostrarRestriccionesDisponibilidad(actividad.disponible) : ""
-          ) + (('visible' in actividad)
-            ? mostrarRestriccionesVisibilidad(actividad.visible) : ""
-          ))
-        : "";
+      let resultado = [];
+      if (permisoEdicion || (!permisoEdicion && deshabilitada)) {
+        if ('disponible' in actividad) {
+          resultado = resultado.concat(mostrarRestriccionesDisponibilidad(actividad.disponible));
+        }
+        if ('visible' in actividad) {
+          resultado = resultado.concat(mostrarRestriccionesVisibilidad(actividad.visible));
+        }
+      }
+      return resultado;
     };
 
     const tengoPermisoPara = function(p) {
@@ -907,28 +998,39 @@
     };
 
     const panelEdicion = function(actividad) {
-      let resultado = "<div class='edicion'>";
-      resultado += "<button>Editar</button>";
-      return `${resultado}</div>` + botonAgregar(actividad.id);
+      const resultado = div("edicion")// "<div class='edicion'>";
+      resultado.appendChild(botón("Editar", "")); // TODO!
+      return [resultado, botonAgregar(actividad.id)];
     };
 
     const botonAgregar = function(idActividadAnterior) {
       // Si el argumento es null, se agrega como primera actividad
-      return "<button class='botonAgregar'>+</button>";
+      const resultado = botón("+", ""); // TODO!
+      resultado.setAttribute('class', 'botonAgregar');
+      return resultado;
     };
 
     const divSección = function(sección, permisoEdicion, deshabilitada) {
-      let contenido = `<p class="seccion ${
-        deshabilitada ? "deshabilitada" : "habilitada"
-      }" onclick="${
-        deshabilitada ? "" : `mostrarSección('${sección.id}')`
-      }">${sección.nombre}<br/>${restriccionesDeAcceso(sección, permisoEdicion, deshabilitada)}</p><br/>`;
-      contenido += `<div class="contenidoSeccion" id="divSección_${sección.id}" style="display:none;">${
-        ("actividades" in sección)
-        ? sección.actividades.map(a => divActividad(a, permisoEdicion)).join("")
-        : ""
-      }</div>`;
-      return contenido;
+      const p = par(`seccion ${deshabilitada ? "deshabilitada" : "habilitada"}`);
+      if (!deshabilitada) {
+        p.setAttribute("onclick", `mostrarSección('${sección.id}');`);
+      }
+      p.appendChild(span(sección.nombre));
+      p.appendChild(br());
+      for (let r of restriccionesDeAcceso(sección, permisoEdicion, deshabilitada)) {
+        p.appendChild(r);
+      }
+      const d = div("contenidoSeccion");
+      d.setAttribute("id", `divSección_${sección.id}`);
+      d.style.display = "none";
+      if ("actividades" in sección) {
+        for (let a of sección.actividades) {
+          for (let e of divActividad(a, permisoEdicion)) {
+            d.appendChild(e);
+          }
+        }
+      }
+      return [p, br(), d];
     };
 
     const mostrarSección = function(idSección) {
@@ -1481,9 +1583,11 @@
         }
       }
       if (texto.length > 0) {
-        texto = `<span style="padding-left: 20px;">${texto}</span><br/>`;
+        const s = span(texto);
+        s.setAttribute("style", "padding-left: 20px;");
+        return [s, br()]
       }
-      return texto;
+      return [];
     };
 
     const mostrarRestriccionesVisibilidad = function(visibilidad) {
@@ -1503,9 +1607,11 @@
         }
       }
       if (texto.length > 0) {
-        texto = `<span style="padding-left: 20px;">${texto}</span><br/>`;
+        const s = span(texto);
+        s.setAttribute("style", "padding-left: 20px;");
+        return [s, br()]
       }
-      return texto;
+      return [];
     };
 
     const completarFechaYHora = function(s) {
