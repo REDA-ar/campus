@@ -796,9 +796,12 @@
       return resultado;
     };
 
-    const botón = function(texto, callback) {
+    const botón = function(texto, callback, clase) {
       const resultado = document.createElement('button');
       resultado.textContent = texto;
+      if (clase) {
+        resultado.setAttribute('class', clase);
+      }
       resultado.setAttribute('onclick', callback);
       return resultado;
     };
@@ -1005,8 +1008,7 @@
 
     const botonAgregar = function(idActividadAnterior) {
       // Si el argumento es null, se agrega como primera actividad
-      const resultado = botón("+", ""); // TODO!
-      resultado.setAttribute('class', 'botonAgregar');
+      const resultado = botón("+", "", "botonAgregar"); // TODO!
       return resultado;
     };
 
@@ -1172,13 +1174,14 @@
     const actualizarNúmerosDeLinea = function() {
       const numberOfLines = Math.max(10, textarea.value.split('\n').length)
 
-      lineNumbers.innerHTML = Array(numberOfLines)
-        .fill('<span></span>')
-        .join('')
+      lineNumbers.textContent = "";
+      for (let i=0; i<numberOfLines; i++) {
+        lineNumbers.appendChild(span(""));
+      }
     };
 
     const restaurarCodigo = function() {
-      botonRestaurar.innerHTML = '';
+      botonRestaurar.textContent = '';
       if ('dni' in info) {
         let prev = localStorage.getItem(`prev text ${info.dni}`);
         if (prev) {
@@ -1190,11 +1193,11 @@
     const f_timeout =function() {
       let c = document.getElementById("counter");
       if (c) {
-        let r = Number.parseInt(c.innerHTML);
+        let r = Number.parseInt(c.textContent);
         if (r<2) {
-          botonRestaurar.innerHTML = '';
+          botonRestaurar.textContent = '';
         } else {
-          c.innerHTML = r-1;
+          c.textContent = r-1;
           info.timeout = setTimeout(f_timeout, 999);
         }
       }
@@ -1210,14 +1213,26 @@
           clearTimeout(info.timeout);
         }
         info.timeout = setTimeout(f_timeout, 1000);
-        botonRestaurar.innerHTML = '(<span id="counter">10</span>) <button class="restore" onclick="restaurarCodigo();">Restaurar código anterior</button>';
+        botonRestaurar.textContent = "";
+        for (let e of [
+          span("("),contador(10),span(") "),
+          botón("Restaurar código anterior", "restaurarCodigo();", "restore")
+        ]) {
+          botonRestaurar.appendChild(e);
+        }
       }
       textarea.value = content;
       actualizarNúmerosDeLinea();
     };
 
+    const contador = function(n) {
+      const resultado = span(n);
+      resultado.setAttribute("id", "counter");
+      return resultado;
+    }
+
     const dniSet = function(dni) {
-      labelDni.innerHTML = dni;
+      labelDni.textContent = dni;
     };
 
     const pantallaLogin = function() {
@@ -1289,7 +1304,7 @@
         pagina.setAttribute('id', `contenido ${cuestionario.id} pg 0`);
         document.getElementById("cuestionario").appendChild(pagina);
         let div = document.createElement('h3');
-        div.innerHTML = cuestionario.nombre;
+        div.textContent = cuestionario.nombre;
         pagina.appendChild(div);
         agregarDivBotones(pagina, cuestionario, 0);
       } else {
@@ -1323,14 +1338,14 @@
 
     const botonSiguiente = function(texto) {
       let b = document.createElement('button');
-      b.innerHTML = texto;
+      b.textContent = texto;
       b.addEventListener('click', pasarPagina);
       return b;
     };
 
     const botonAtras = function(texto) {
       let b = document.createElement('button');
-      b.innerHTML = texto;
+      b.textContent = texto;
       b.addEventListener('click', volverPagina);
       return b;
     };
@@ -1370,6 +1385,10 @@
       }
     };
 
+    const textoADom = function(nodo, texto) {
+      nodo.innerHTML = texto;
+    };
+
     const mostrarPaginaCuestionario = function() {
       let pagina = document.getElementById(`contenido ${info.actividad.id} pg ${info.pagina}`);
       if (pagina === null) {
@@ -1379,16 +1398,17 @@
         let nPregunta = info.pagina-1;
         let pregunta = info.actividad.solo_preguntas[nPregunta];
         let titulo = document.createElement('h4');
-        titulo.innerHTML = pregunta.titulo;
+        titulo.textContent = pregunta.titulo;
         pagina.appendChild(titulo);
         let contenido = document.createElement('div');
         contenido.classList.add('pregunta');
-        contenido.innerHTML = pregunta.pregunta;
+        textoADom(contenido, pregunta.pregunta);
         pagina.appendChild(contenido);
         if (pregunta.tipo != "SOLO_TEXTO") {
           let respuestas = document.createElement('div');
           respuestas.classList.add('respuestas');
-          respuestas.innerHTML = '<span>Tu respuesta:</span>';
+          respuestas.textContent = "";
+          respuestas.appendChild(span("Tu respuesta:"));
           pagina.appendChild(respuestas);
           let opciones = document.createElement('div');
           opciones.classList.add('espacioRespuesta');
@@ -1417,14 +1437,14 @@
 
     const botonRespuesta = function(nPregunta, nRespuesta, texto, opciones) {
       let b = document.createElement('button');
-      b.innerHTML = texto.replaceAll("<p>", "<p style='margin:0px;'>");
+      textoADom(b, texto.replaceAll("<p>", "<p style='margin:0px;'>"));
       b.addEventListener('click', fResponder(nPregunta, nRespuesta, texto, opciones));
       return b;
     };
 
     const fResponder = function(nPregunta, respuesta, texto, opciones) {
       return function() {
-        opciones.innerHTML = texto;
+        textoADom(opciones, texto);
         const datos = {
           usuario: info.dni,
           contrasenia: info.contrasenia,
@@ -1482,10 +1502,11 @@
     const recuadroDevolucion = function(texto) {
       let div = document.createElement('div');
       div.classList.add('respuestas');
-      div.innerHTML = "<span>Devolución:</span>";
+      div.textContent = "";
+      div.appendChild(span("Devolución:"));
       let devolucion = document.createElement('div');
       devolucion.classList.add('espacioRespuesta');
-      devolucion.innerHTML = texto;
+      textoADom(devolucion, texto);
       div.appendChild(devolucion);
       return div;
     };
@@ -1499,9 +1520,9 @@
 
     const botonReintentar = function(opciones, nPregunta) {
       let b = document.createElement('button');
-      b.innerHTML = "Cambiar la respuesta";
+      b.textContent = "Cambiar la respuesta";
       b.addEventListener('click', function() {
-        opciones.innerHTML = "";
+        opciones.textContent = "";
         completarOpciones(opciones, nPregunta);
       });
       return b;
@@ -1624,7 +1645,7 @@
     };
 
     const Renderizar_En_ = function(contenido, nodo) {
-      nodo.innerHTML = "";
+      nodo.textContent = "";
       Renderizar_ComoHijoDe_(contenido, nodo);
     };
 
@@ -1635,7 +1656,7 @@
         }
       } else if (typeof contenido == typeof "") {
         let hijo = document.createElement('span');
-        hijo.innerHTML = contenido;
+        textoADom(hijo, contenido);
         nodo.appendChild(hijo);
       } else if ('tex' in contenido) {
         let hijo = document.createElement('span');
