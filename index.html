@@ -535,10 +535,10 @@
       const pantalla = document.getElementById("pantallaEnunciado");
       if (pantalla.className.includes('full')) {
         pantalla.className = pantalla.className.replace('full', 'half');
-        document.getElementById("moverEnunciado").textContent = "&lt;&lt;";
+        document.getElementById("moverEnunciado").textContent = "<<";
       } else {
         pantalla.className = pantalla.className.replace('half', 'full');
-        document.getElementById("moverEnunciado").textContent = "&gt;&gt;";
+        document.getElementById("moverEnunciado").textContent = ">>";
       }
     };
 
@@ -930,7 +930,7 @@
       selector.textContent = '';
       selector.appendChild(h3("Seleccione una actividad", "tituloSelector"));
       selector.appendChild(divSelectoresActividad());
-      // selector.appendChild(botón("Cancelar", "pantallaWorkspace();"));
+      selector.appendChild(botón("Cancelar", "pantallaWorkspace();"));
     };
 
     const divSelectoresActividad= function() {
