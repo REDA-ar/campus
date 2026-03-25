@@ -1044,36 +1044,61 @@
       }
     };
 
+    const intentos = {k:0}; // Muchas veces falla a la primera pero a la segunda se arregla.
+
     const sendRequest = function(method, path, callback, jsonObj, failCallback, timeout=2) {
       document.getElementById("ui").style.display = 'none';
       document.getElementById("espera").style.display = 'block';
-      let request = createRequest(timeout);
-      request.open(method, rutaAlServidor() + path, true);
-      request.setRequestHeader('Content-type', 'application/json');
-      request.onreadystatechange = function() {
-        if (request.readyState == 4) {
-          // localStorage.clear();
-          if (request.status == 200) {
-            try {
-              let received = JSON.parse(request.responseText);
-              callback(received);
-            } catch (e) {
-              console.log(e);
+      intentos.k = 0;
+      intentos.f = function() {
+        let request = createRequest(timeout);
+        request.open(method, rutaAlServidor() + path, true);
+        request.setRequestHeader('Content-type', 'application/json');
+        request.onreadystatechange = function() {
+          if (request.readyState == 4) {
+            // localStorage.clear();
+            if (request.status == 200) {
+              try {
+                let received = JSON.parse(request.responseText);
+                callback(received);
+              } catch (e) {
+                console.log(e);
+                if (failCallback) { failCallback(); }
+              }
+            } else {
+              console.log(request.status);
               if (failCallback) { failCallback(); }
+              if (request.status == 0) {
+                // Si responde 0 es que se colgó
+                // Por ahora lo dejo deshabilitado porque no sé qué tan seguido pasa...
+                /*
+                intentos.k++;
+                if (intentos.k == 1) { // Intentar otra vez.
+                  setTimeout(intentos.f, 0);
+                  return; // Evito restablecer la ui.
+                } else { // k == 2
+                  Notificar("RT no responde"); // Podría pasar el usuario logueado para mandarle un aviso cuando lo reinicie.
+                }
+                */
+              }
             }
-          } else {
-            console.log(request.status);
-            if (failCallback) { failCallback(); }
+            document.getElementById("espera").style.display = 'none';
+            document.getElementById("ui").style.display = 'block';
           }
-          document.getElementById("espera").style.display = 'none';
-          document.getElementById("ui").style.display = 'block';
+        };
+        if (jsonObj) {
+          request.send(JSON.stringify(jsonObj));
+        } else {
+          request.send('');
         }
       };
-      if (jsonObj) {
-        request.send(JSON.stringify(jsonObj));
-      } else {
-        request.send('');
-      }
+      intentos.f();
+    };
+
+    const Notificar = function(mensaje) {
+      sendRequest('POST', `https://docs.google.com/forms/d/e/1FAIpQLSf1kS-KBU5lDGZ2LsXUYOjBz5TCm39ngQASMsco2MNKWqAgBQ/viewform?usp=pp_url&entry.370539263=${encodeURIComponent(mensaje)}`, function() {
+        alert("Parece que hay un problema con el servidor. Ya lo estamos revisando. Te avisaremos en cuanto lo hayamos solucionado.");
+      }, {}); // La callback podría mostrar un mensaje avisando del error.
     };
 
     const createRequest = function(timeout=2) {
