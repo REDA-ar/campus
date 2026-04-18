@@ -4,6 +4,7 @@
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.38/dist/katex.min.css" integrity="sha384-/L6i+LN3dyoaK2jYG5ZLh5u13cjdsPDcFOSNJeFBFa/KgVXR5kOfTdiN3ft1uMAq" crossorigin="anonymous">
     <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.38/dist/katex.min.js" integrity="sha384-H6s1ZrH2CKpFpqR680poRdStIRJGXty7fSkxAcIfxwl9iu6A4BOPtTk7vQ58Ovio" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/showdown/2.1.0/showdown.min.js"></script>
   </head>
   <script src="settings.js"></script>
   <style media="screen">
@@ -1337,6 +1338,10 @@
       }
     };
 
+    const seSaltaManual = function(actividad) {
+      return actividad.tipo == "SOLO_TEXTO";
+    };
+
     const agregarDivBotones = function(pagina, cuestionario, pg) {
       botonesAAgregar = [];
       if (pg > 0 && sePuedeRetroceder()) {
@@ -1344,7 +1349,7 @@
       }
       if (pg == 0) {
         botonesAAgregar.push(botonSiguiente("Comenzar"));
-      } else if (sePuedenSaltearPreguntas()) {
+      } else if (sePuedenSaltearPreguntas() || seSaltaManual(cuestionario.solo_preguntas[pg-1])) {
         botonesAAgregar.push(botonSiguiente(
           pg < cuestionario.solo_preguntas.length
           ? "Siguiente"
@@ -1427,7 +1432,7 @@
         pagina.appendChild(titulo);
         let contenido = document.createElement('div');
         contenido.classList.add('pregunta');
-        textoADom(contenido, pregunta.pregunta);
+        Renderizar_En_(pregunta.pregunta, contenido)
         pagina.appendChild(contenido);
         if (pregunta.tipo != "SOLO_TEXTO") {
           let respuestas = document.createElement('div');
@@ -1457,6 +1462,34 @@
           }
           opciones.appendChild(botonRespuesta(nPregunta, i, textosRespuestas[i].texto, opciones));
         }
+      } else if (pregunta.tipo == "SLIDER") {
+        const rango = ("rango" in pregunta) ? pregunta.rango : {desde:1,hasta:5,paso:1};
+        const desde = ("desde" in rango) ? rango.desde : 1;
+        const hasta = ("hasta" in rango) ? rango.hasta : (desde + 4);
+        const paso = ("paso" in rango) ? rango.paso : 1;
+        const slider = document.createElement("input");
+        slider.setAttribute("type", "range");
+        slider.setAttribute("min", `${desde}`);
+        slider.setAttribute("max", `${hasta}`);
+        slider.setAttribute("step", `${paso}`);
+        slider.value = `${desde}`;
+        opciones.appendChild(slider);
+        opciones.appendChild(document.createElement("br"));
+        const etiqueta = document.createElement("label");
+        etiqueta.textContent = desde;
+        opciones.appendChild(etiqueta);
+        slider.addEventListener('input', function() {
+          etiqueta.textContent = slider.value;
+        });
+        opciones.appendChild(document.createElement("br"));
+        opciones.appendChild(document.createElement("br"));
+        const botónEnviar = document.createElement("button");
+        botónEnviar.textContent = "Enviar";
+        botónEnviar.addEventListener('click', function() {
+          const respuesta = slider.value;
+          fResponder(nPregunta, respuesta, respuesta, opciones)();
+        });
+        opciones.appendChild(botónEnviar);
       }
     };
 
@@ -1687,6 +1720,11 @@
         let hijo = document.createElement('span');
         nodo.appendChild(hijo);
         katex.render(contenido.tex, hijo);
+      } else if ('md' in contenido) {
+        const converter = new showdown.Converter();
+        const hijo = document.createElement('div');
+        textoADom(hijo, converter.makeHtml(contenido.md));
+        nodo.appendChild(hijo);
       }
     };
 
