@@ -1386,6 +1386,7 @@
         info.pagina = info.pagina + 1;
         if ('dni' in info) { localStorage.setItem(`pg ${info.actividad.id} ${info.dni}`, info.pagina); }
         mostrarPaginaCuestionario(info.pagina);
+        notificarEjercicioAbierto(`${info.actividad.id}.${info.pagina}`);
       } else {
         if ('dni' in info) {
           localStorage.removeItem(`ej ${info.dni}`);
@@ -1462,6 +1463,19 @@
           }
           opciones.appendChild(botonRespuesta(nPregunta, i, textosRespuestas[i].texto, opciones));
         }
+      } else if (pregunta.tipo == "TEXTO_LIBRE") {
+        const campoEntrada = document.createElement("textarea");
+        campoEntrada.setAttribute("style","field-sizing:content;min-width:50%;max-width:100%;");
+        opciones.appendChild(campoEntrada);
+        opciones.appendChild(document.createElement("br"));
+        opciones.appendChild(document.createElement("br"));
+        const botónEnviar = document.createElement("button");
+        botónEnviar.textContent = "Enviar";
+        botónEnviar.addEventListener('click', function() {
+          const respuesta = campoEntrada.value;
+          fResponder(nPregunta, respuesta, respuesta, opciones)();
+        });
+        opciones.appendChild(botónEnviar);
       } else if (pregunta.tipo == "SLIDER") {
         const rango = ("rango" in pregunta) ? pregunta.rango : {desde:1,hasta:5,paso:1};
         const desde = ("desde" in rango) ? rango.desde : 1;
@@ -1530,6 +1544,8 @@
             opciones.appendChild(recuadroDevolucion(devolucion.texto));
           }
         }
+        opciones.appendChild(document.createElement("br"));
+        opciones.appendChild(document.createElement("br"));
         if (sePuedeReintentar()) {
           opciones.appendChild(botonReintentar(opciones, nPregunta));
         }
