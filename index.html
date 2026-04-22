@@ -1470,10 +1470,14 @@
         opciones.appendChild(document.createElement("br"));
         opciones.appendChild(document.createElement("br"));
         const botónEnviar = document.createElement("button");
+        botónEnviar.disabled = true;
         botónEnviar.textContent = "Enviar";
         botónEnviar.addEventListener('click', function() {
           const respuesta = campoEntrada.value;
           fResponder(nPregunta, respuesta, respuesta, opciones)();
+        });
+        campoEntrada.addEventListener('input', function() {
+          botónEnviar.disabled = false;
         });
         opciones.appendChild(botónEnviar);
       } else if (pregunta.tipo == "SLIDER") {
@@ -1492,18 +1496,20 @@
         const etiqueta = document.createElement("label");
         etiqueta.textContent = desde;
         opciones.appendChild(etiqueta);
-        slider.addEventListener('input', function() {
-          etiqueta.textContent = slider.value;
-        });
         opciones.appendChild(document.createElement("br"));
         opciones.appendChild(document.createElement("br"));
         const botónEnviar = document.createElement("button");
         botónEnviar.textContent = "Enviar";
+        botónEnviar.disabled = true;
         botónEnviar.addEventListener('click', function() {
           const respuesta = slider.value;
           fResponder(nPregunta, respuesta, respuesta, opciones)();
         });
         opciones.appendChild(botónEnviar);
+        slider.addEventListener('input', function() {
+          etiqueta.textContent = slider.value;
+          botónEnviar.disabled = false;
+        });
       }
     };
 
@@ -1531,31 +1537,42 @@
 
     const fVerRespuesta = function(opciones, nPregunta) {
       return function(jsonObj) {
-        let sePuedeContinuar = true;
+        let devolucion = {};
+        let hayDevolución = false;
         if ('devolucion' in jsonObj) {
           devolucion = jsonObj.devolucion;
-          if ('correcto' in devolucion) {
-            let respuestaElegida = opciones.childNodes[0];
-            respuestaElegida.classList.add('conIcono');
-            opciones.insertBefore(iconoDevolucion(devolucion.correcto), respuestaElegida);
-            sePuedeContinuar = devolucion.correcto;
-          }
-          if ('texto' in devolucion) {
-            opciones.appendChild(recuadroDevolucion(devolucion.texto));
-          }
+          hayDevolución = (
+            'correcto' in devolucion || 'texto' in devolucion
+          );
         }
-        opciones.appendChild(document.createElement("br"));
-        opciones.appendChild(document.createElement("br"));
-        if (sePuedeReintentar()) {
-          opciones.appendChild(botonReintentar(opciones, nPregunta));
-        }
-        if (!sePuedenSaltearPreguntas()) {
-          if (!sePuedeReintentar() || sePuedeContinuar) {
-            opciones.appendChild(botonSiguiente(
-              info.pagina < info.actividad.solo_preguntas.length
-              ? "Siguiente"
-              : "Finalizar"
-            ));
+        if (!hayDevolución && !sePuedeReintentar()) {
+          pasarPagina();
+        } else {
+          let sePuedeContinuar = true;
+          if (hayDevolución) {
+            if ('correcto' in devolucion) {
+              let respuestaElegida = opciones.childNodes[0];
+              respuestaElegida.classList.add('conIcono');
+              opciones.insertBefore(iconoDevolucion(devolucion.correcto), respuestaElegida);
+              sePuedeContinuar = devolucion.correcto;
+            }
+            if ('texto' in devolucion) {
+              opciones.appendChild(recuadroDevolucion(devolucion.texto));
+            }
+          }
+          opciones.appendChild(document.createElement("br"));
+          opciones.appendChild(document.createElement("br"));
+          if (sePuedeReintentar()) {
+            opciones.appendChild(botonReintentar(opciones, nPregunta));
+          }
+          if (!sePuedenSaltearPreguntas()) {
+            if (!sePuedeReintentar() || sePuedeContinuar) {
+              opciones.appendChild(botonSiguiente(
+                info.pagina < info.actividad.solo_preguntas.length
+                ? "Siguiente"
+                : "Finalizar"
+              ));
+            }
           }
         }
       }
