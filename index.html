@@ -1756,6 +1756,9 @@
       } else if ('md' in contenido) {
         const converter = new showdown.Converter();
         const hijo = document.createElement('div');
+        if ('css' in contenido) {
+          hijo.setAttribute("style", contenido.css);
+        };
         textoADom(hijo, converter.makeHtml(contenido.md));
         nodo.appendChild(hijo);
       }
