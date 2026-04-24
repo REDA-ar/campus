@@ -180,9 +180,14 @@
       background-color: #fff;
     }
     .pregunta {
+      padding: 10px;
+      margin: 5px;
+    }
+    .pregunta_simple {
       border: 1px solid;
       border-radius: 5px;
-      padding: 10px;
+    }
+    .pregunta_multi {
     }
     .respuestas {
       border-radius: 5px;
@@ -1428,40 +1433,184 @@
         document.getElementById("cuestionario").appendChild(pagina);
         let nPregunta = info.pagina-1;
         let pregunta = info.actividad.solo_preguntas[nPregunta];
-        let titulo = document.createElement('h4');
-        titulo.textContent = pregunta.titulo;
-        pagina.appendChild(titulo);
-        let contenido = document.createElement('div');
-        contenido.classList.add('pregunta');
-        Renderizar_En_(pregunta.pregunta, contenido)
-        pagina.appendChild(contenido);
-        if (pregunta.tipo != "SOLO_TEXTO") {
-          let respuestas = document.createElement('div');
-          respuestas.classList.add('respuestas');
-          respuestas.textContent = "";
-          respuestas.appendChild(span("Tu respuesta:"));
-          pagina.appendChild(respuestas);
-          let opciones = document.createElement('div');
-          opciones.classList.add('espacioRespuesta');
-          respuestas.appendChild(opciones);
-          completarOpciones(opciones, nPregunta)
-        }
+        RenderizarPregunta_En_(pregunta, pagina, [nPregunta]);
         agregarDivBotones(pagina, info.actividad, info.pagina);
       } else {
         pagina.style.display = 'block';
       }
     };
 
-    const completarOpciones = function(opciones, nPregunta) {
-      let pregunta = info.actividad.solo_preguntas[nPregunta];
-      if (pregunta.tipo == "OPCION_MULTIPLE") {
-        let textosRespuestas = info.actividad.solo_respuestas[nPregunta];
-        for (let i=0; i < textosRespuestas.length; i++) {
-          if (i>0) {
-            opciones.appendChild(document.createElement("br"));
-            opciones.appendChild(document.createElement("br"));
+    const fValor = function(callbackObj, botónEnviar) {
+      return function(i) {
+        callbackObj.on[i] = true;
+        if (callbackObj.on.every(x => x)) {
+          botónEnviar.disabled = false;
+        }
+      }
+    };
+
+    const RenderizarPregunta_En_ = function(pregunta, pagina, isPregunta, cbObjParent={}) {
+      if ('titulo' in pregunta) {
+        let titulo = document.createElement('h4');
+        titulo.textContent = pregunta.titulo;
+        pagina.appendChild(titulo);
+      }
+      let contenido = document.createElement('div');
+      contenido.classList.add('pregunta');
+      pagina.appendChild(contenido);
+      if (pregunta.tipo == "MULTI") {
+        contenido.classList.add('pregunta_multi');
+        Renderizar_En_(pregunta.contenido, contenido);
+        const subPreguntas = (('solo_preguntas' in pregunta) ? pregunta.solo_preguntas : []);
+        if (subPreguntas.length > 0) {
+          const callbackObj = {};
+          callbackObj.on = [];
+          callbackObj.fSends = [];
+          callbackObj.fTextNOpts = [];
+          const botónEnviar = document.createElement("button");
+          callbackObj.fVal = fValor(callbackObj, botónEnviar);
+          i = 0;
+          for (let subPregunta of subPreguntas) {
+            callbackObj.on.push(false);
+            RenderizarPregunta_En_(subPregunta, pagina, isPregunta.concat(i), callbackObj);
+            i ++;
           }
-          opciones.appendChild(botonRespuesta(nPregunta, i, textosRespuestas[i].texto, opciones));
+          const divEnviar = document.createElement("div");
+          divEnviar.setAttribute("style", "text-align: center;margin:10px");
+          divEnviar.appendChild(botónEnviar);
+          botónEnviar.disabled = true;
+          botónEnviar.textContent = "Enviar";
+          const divReintentar = document.createElement("div");
+          divReintentar.setAttribute("style", "text-align: center;margin:10px");
+          botónEnviar.addEventListener('click', function() {
+            botónEnviar.disabled = true;
+            const respuesta = [];
+            const paresTextoOpciones = [];
+            for (let f of callbackObj.fSends) {
+              respuesta.push(f());
+            }
+            for (let f of callbackObj.fTextNOpts) {
+              paresTextoOpciones.push(f());
+            }
+            // Los limpio para la próxima iteración ...
+            callbackObj.fSends = [];
+            callbackObj.fTextNOpts = [];
+            fResponder(isPregunta[0], respuesta, paresTextoOpciones,
+              {divEnviar, divReintentar, cbObj:callbackObj}
+            )();
+          });
+          pagina.appendChild(divEnviar);
+          pagina.appendChild(divReintentar);
+        }
+      } else {
+        contenido.classList.add('pregunta_simple');
+        if ('pregunta' in pregunta) {
+          Renderizar_En_(pregunta.pregunta, contenido);
+        }
+        if (pregunta.tipo != "SOLO_TEXTO") {
+          let respuestas = document.createElement('div');
+          respuestas.classList.add('respuestas');
+          respuestas.textContent = "";
+          respuestas.appendChild(span("Tu respuesta:"));
+          if (isPregunta.length > 1) {
+            contenido.appendChild(respuestas);
+          } else {
+            pagina.appendChild(respuestas);
+          }
+          let opciones = document.createElement('div');
+          opciones.classList.add('espacioRespuesta');
+          respuestas.appendChild(opciones);
+          completarOpciones(opciones, isPregunta, cbObjParent);
+        }
+      }
+    };
+
+    const preguntasParaN = function(isPregunta) {
+      let actividadActual = info.actividad;
+      for (let i of isPregunta) {
+        actividadActual = actividadActual.solo_preguntas[i];
+      }
+      return actividadActual;
+    };
+
+    const respuestasParaN = function(isPregunta) {
+      let actividadActual = info.actividad;
+      const j = isPregunta[isPregunta.length-1];
+      for (let i of isPregunta.toSpliced(-1)) {
+        actividadActual = actividadActual.solo_preguntas[i];
+      }
+      return actividadActual.solo_respuestas[j];
+    };
+
+    const radioRespuesta = function() {
+      let r = document.createElement("input");
+      r.setAttribute("type", "checkbox");
+      return r;
+    };
+
+    const completarOpciones = function(opciones, isPregunta, cbObjParent={}) {
+      let pregunta = preguntasParaN(isPregunta);
+      if (pregunta.tipo == "OPCION_MULTIPLE") {
+        const textosRespuestas = respuestasParaN(isPregunta);
+        if (isPregunta.length == 1) {
+          for (let i=0; i < textosRespuestas.length; i++) {
+            if (i>0) {
+              opciones.appendChild(document.createElement("br"));
+              opciones.appendChild(document.createElement("br"));
+            }
+            opciones.appendChild(botonRespuesta(isPregunta[0], i, textosRespuestas[i].texto, opciones));
+          }
+        } else { // Entonces la data está en cbObjParent
+          const todosLosChecks = [];
+          const fSelect = function(j) {
+            if (todosLosChecks[j].checked) { // TODO: ver si es selección única o múltiple
+              for (let i=0; i < todosLosChecks.length; i++) {
+                if (i != j) {
+                  todosLosChecks[i].checked = false;
+                }
+              }
+            } else {
+              if (j > 0) {
+                todosLosChecks[0].checked = true;
+              } else if (todosLosChecks.length > 1) {
+                todosLosChecks[1].checked = true;
+              } else {
+                setTimeout(function() {todosLosChecks[j].checked = true;}, 1);
+              }
+            }
+          };
+          for (let i=0; i < textosRespuestas.length; i++) {
+            if (i>0) {
+              opciones.appendChild(document.createElement("br"));
+              opciones.appendChild(document.createElement("br"));
+            }
+            let nuevoCheck = radioRespuesta();
+            todosLosChecks.push(nuevoCheck);
+            opciones.appendChild(nuevoCheck);
+            let labelCheck = document.createElement("label");
+            textoADom(labelCheck, textosRespuestas[i].texto.replaceAll("<p>", "<p style='margin:0px;'>"));
+            opciones.appendChild(nuevoCheck);
+            opciones.appendChild(labelCheck);
+            nuevoCheck.addEventListener('change', function() {
+              fSelect(i);
+              cbObjParent.fVal(isPregunta[isPregunta.length-1]);
+            });
+          }
+          const iSeleccionados = function() {
+            // TODO: ver si es selección única o múltiple
+            for (let i=0; i < todosLosChecks.length; i++) {
+              if (todosLosChecks[i].checked) {
+                return i;
+              }
+            }
+            return -1;
+          };
+          cbObjParent.fTextNOpts.push(function() {
+            // TODO: ver si es selección única o múltiple
+            let i = iSeleccionados();
+            return {texto:((i >= 0) ? textosRespuestas[i].texto : ""), opciones};
+          });
+          cbObjParent.fSends.push(iSeleccionados);
         }
       } else if (pregunta.tipo == "TEXTO_LIBRE") {
         const campoEntrada = document.createElement("textarea");
@@ -1469,17 +1618,29 @@
         opciones.appendChild(campoEntrada);
         opciones.appendChild(document.createElement("br"));
         opciones.appendChild(document.createElement("br"));
-        const botónEnviar = document.createElement("button");
-        botónEnviar.disabled = true;
-        botónEnviar.textContent = "Enviar";
-        botónEnviar.addEventListener('click', function() {
-          const respuesta = campoEntrada.value;
-          fResponder(nPregunta, respuesta, respuesta, opciones)();
-        });
-        campoEntrada.addEventListener('input', function() {
-          botónEnviar.disabled = false;
-        });
-        opciones.appendChild(botónEnviar);
+        if (isPregunta.length == 1) {
+          const botónEnviar = document.createElement("button");
+          botónEnviar.disabled = true;
+          botónEnviar.textContent = "Enviar";
+          botónEnviar.addEventListener('click', function() {
+            const respuesta = campoEntrada.value;
+            fResponder(isPregunta[0], respuesta, [{texto:respuesta, opciones}])();
+          });
+          campoEntrada.addEventListener('input', function() {
+            botónEnviar.disabled = false;
+          });
+          opciones.appendChild(botónEnviar);
+        } else { // Entonces la data está en cbObjParent
+          cbObjParent.fTextNOpts.push(function() {
+            return {texto:campoEntrada.value, opciones};
+          });
+          cbObjParent.fSends.push(function() {
+            return campoEntrada.value;
+          });
+          campoEntrada.addEventListener('input', function() {
+            cbObjParent.fVal(isPregunta[isPregunta.length-1]);
+          });
+        }
       } else if (pregunta.tipo == "SLIDER") {
         const rango = ("rango" in pregunta) ? pregunta.rango : {desde:1,hasta:5,paso:1};
         const desde = ("desde" in rango) ? rango.desde : 1;
@@ -1494,35 +1655,53 @@
         opciones.appendChild(slider);
         opciones.appendChild(document.createElement("br"));
         const etiqueta = document.createElement("label");
-        etiqueta.textContent = desde;
+        etiqueta.textContent = "esperando selección ...";
         opciones.appendChild(etiqueta);
-        opciones.appendChild(document.createElement("br"));
-        opciones.appendChild(document.createElement("br"));
-        const botónEnviar = document.createElement("button");
-        botónEnviar.textContent = "Enviar";
-        botónEnviar.disabled = true;
-        botónEnviar.addEventListener('click', function() {
-          const respuesta = slider.value;
-          fResponder(nPregunta, respuesta, respuesta, opciones)();
-        });
-        opciones.appendChild(botónEnviar);
-        slider.addEventListener('input', function() {
-          etiqueta.textContent = slider.value;
-          botónEnviar.disabled = false;
-        });
+        if (isPregunta.length == 1) {
+          opciones.appendChild(document.createElement("br"));
+          opciones.appendChild(document.createElement("br"));
+          const botónEnviar = document.createElement("button");
+          botónEnviar.textContent = "Enviar";
+          botónEnviar.disabled = true;
+          botónEnviar.addEventListener('click', function() {
+            const respuesta = slider.value;
+            fResponder(nPregunta, respuesta, [{texto:respuesta, opciones}])();
+          });
+          opciones.appendChild(botónEnviar);
+          slider.addEventListener('input', function() {
+            etiqueta.textContent = slider.value;
+            botónEnviar.disabled = false;
+          });
+        } else { // Entonces la data está en cbObjParent
+          cbObjParent.fTextNOpts.push(function() {
+            return {texto:slider.value, opciones};
+          });
+          cbObjParent.fSends.push(function() {
+            return slider.value;
+          });
+          slider.addEventListener('input', function() {
+            etiqueta.textContent = slider.value;
+            cbObjParent.fVal(isPregunta[isPregunta.length-1]);
+          });
+        }
       }
     };
 
     const botonRespuesta = function(nPregunta, nRespuesta, texto, opciones) {
       let b = document.createElement('button');
       textoADom(b, texto.replaceAll("<p>", "<p style='margin:0px;'>"));
-      b.addEventListener('click', fResponder(nPregunta, nRespuesta, texto, opciones));
+      b.addEventListener('click', fResponder(nPregunta, nRespuesta, [{texto, opciones}]));
       return b;
     };
 
-    const fResponder = function(nPregunta, respuesta, texto, opciones) {
+    const fResponder = function(nPregunta, respuesta, paresTextoOpciones, extra={}) {
       return function() {
-        textoADom(opciones, texto);
+        if ('divEnviar' in extra) {
+          extra.divEnviar.style.display = 'none';
+        }
+        for (let par of paresTextoOpciones) {
+          textoADom(par.opciones, `<p>${par.texto}</p>`);
+        }
         const datos = {
           usuario: info.dni,
           contrasenia: info.contrasenia,
@@ -1531,8 +1710,60 @@
           nPregunta,
           respuesta
         };
-        sendRequest('POST', 'answer', fVerRespuesta(opciones, nPregunta), datos);
+        sendRequest('POST', 'answer', fVerVariasRespuestas(paresTextoOpciones, nPregunta, extra), datos);
       };
+    };
+
+    const fVerVariasRespuestas = function(paresTextoOpciones, nPregunta, extra={}) {
+      if (paresTextoOpciones.length == 1) {
+        return fVerRespuesta(paresTextoOpciones[0].opciones, nPregunta);
+      } else {
+        const divReintentar = extra.divReintentar;
+        return function(jsonObj) {
+          let hayDevolución = false;
+          if ('devolucion' in jsonObj) {
+            for (let devolucion of jsonObj.devolucion) {
+              if ('correcto' in devolucion || 'texto' in devolucion) {
+                hayDevolución = true;
+              }
+            }
+          }
+          if (!hayDevolución && !sePuedeReintentar()) {
+            pasarPagina();
+          } else {
+            let devoluciones = jsonObj.devolucion;
+            let sePuedeContinuar = true;
+            for (let i=0; i<devoluciones.length; i++) {
+              let devolucion = devoluciones[i];
+              let opciones = paresTextoOpciones[i].opciones;
+              if ('correcto' in devolucion) {
+                let respuestaElegida = opciones.childNodes[0];
+                respuestaElegida.classList.add('conIcono');
+                opciones.insertBefore(iconoDevolucion(devolucion.correcto), respuestaElegida);
+                sePuedeContinuar = devolucion.correcto;
+              }
+              if ('texto' in devolucion) {
+                opciones.appendChild(recuadroDevolucion(devolucion.texto));
+              }
+            }
+            divReintentar.textContent = "";
+            divReintentar.appendChild(document.createElement("br"));
+            divReintentar.appendChild(document.createElement("br"));
+            if (sePuedeReintentar()) {
+              divReintentar.appendChild(botonReintentarVarias(paresTextoOpciones, nPregunta, extra));
+            }
+            if (!sePuedenSaltearPreguntas()) {
+              if (!sePuedeReintentar() || sePuedeContinuar) {
+                divReintentar.appendChild(botonSiguiente(
+                  info.pagina < info.actividad.solo_preguntas.length
+                  ? "Siguiente"
+                  : "Finalizar"
+                ));
+              }
+            }
+          }
+        }
+      }
     };
 
     const fVerRespuesta = function(opciones, nPregunta) {
@@ -1614,7 +1845,26 @@
       b.textContent = "Cambiar la respuesta";
       b.addEventListener('click', function() {
         opciones.textContent = "";
-        completarOpciones(opciones, nPregunta);
+        completarOpciones(opciones, [nPregunta]);
+      });
+      return b;
+    };
+
+    const botonReintentarVarias = function(paresTextoOpciones, nPregunta, extra) {
+      const divEnviar = extra.divEnviar;
+      const divReintentar = extra.divReintentar;
+      const cbObj = extra.cbObj;
+      let b = document.createElement('button');
+      b.textContent = "Cambiar las respuestas";
+      b.addEventListener('click', function() {
+        i = 0;
+        for (let par of paresTextoOpciones) {
+          par.opciones.textContent = "";
+          completarOpciones(par.opciones, [nPregunta, i], cbObj);
+          i ++;
+        }
+        divReintentar.textContent = "";
+        divEnviar.style.display = '';
       });
       return b;
     };
