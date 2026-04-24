@@ -1430,11 +1430,15 @@
       if (pagina === null) {
         pagina = document.createElement('div');
         pagina.setAttribute('id', `contenido ${info.actividad.id} pg ${info.pagina}`);
-        document.getElementById("cuestionario").appendChild(pagina);
+        const cuestionario = document.getElementById("cuestionario");
+        cuestionario.appendChild(pagina);
         let nPregunta = info.pagina-1;
         let pregunta = info.actividad.solo_preguntas[nPregunta];
         RenderizarPregunta_En_(pregunta, pagina, [nPregunta]);
         agregarDivBotones(pagina, info.actividad, info.pagina);
+        setTimeout(function() {
+          cuestionario.scrollTo(0,0);
+        },1);
       } else {
         pagina.style.display = 'block';
       }
